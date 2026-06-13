@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:api-gateway="http://www.mulesoft.org/schema/mule/api-gateway" xmlns:oauth="http://www.mulesoft.org/schema/mule/oauth" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns:salesforce-composite="http://www.mulesoft.org/schema/mule/salesforce-composite" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
+http://www.mulesoft.org/schema/mule/salesforce-composite http://www.mulesoft.org/schema/mule/salesforce-composite/current/mule-salesforce-composite.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/oauth http://www.mulesoft.org/schema/mule/oauth/current/mule-oauth.xsd
+http://www.mulesoft.org/schema/mule/api-gateway http://www.mulesoft.org/schema/mule/api-gateway/current/mule-api-gateway.xsd">
+    <http:listener-config name="main-httpListenerConfig">
+        <http:listener-connection host="0.0.0.0" port="8081" />
+    </http:listener-config>
+    <apikit:config name="main-config" api="resource::365d8e9a-5b53-4d65-8776-8d29047c4ac6:otaku101-sfdc-supply-sapi:1.0.1:raml:zip:main.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+    <salesforce-composite:composite-config name="SalesforceCompositeConfig" doc:name="Salesforce Composite Config" doc:id="2412b199-01d3-4e7e-b384-e3ea3b8471eb" >
+		<salesforce-composite:config-with-oauth-connection >
+			<salesforce-composite:oauth-authorization-code consumerKey="${salesforceCompositeConfig.clientId}" consumerSecret="${salesforceCompositeConfig.clientSecret}"/>
+			<salesforce-composite:oauth-callback-config listenerConfig="main-httpListenerConfig" callbackPath="${salesforceCompositeConfig.callbackUri}" authorizePath="${salesforceCompositeConfig.authorizeUri}" externalCallbackUrl="${salesforceCompositeConfig.externalCallbackUrl}"/>
+		</salesforce-composite:config-with-oauth-connection>
+	</salesforce-composite:composite-config>
+	<configuration-properties doc:name="Configuration properties" doc:id="0f1c1a36-9842-48e8-b26c-92e41e5213c2" file="config.yaml" />
+	<salesforce:sfdc-config name="SalesforceConfig" doc:name="Salesforce Config" doc:id="2c1ead3f-7833-4651-b30c-a6acdd7c0e26" >
+		<salesforce:config-with-oauth-connection >
+			<salesforce:oauth-authorization-code consumerKey="${salesforceConfig.clientId}" consumerSecret="${salesforceConfig.clientSecret}"/>
+			<salesforce:oauth-callback-config listenerConfig="main-httpListenerConfig" callbackPath="${salesforceConfig.callbackUri}" authorizePath="${salesforceConfig.authorizeUri}" externalCallbackUrl="${salesforceConfig.externalCallbackUrl}" />
+		</salesforce:config-with-oauth-connection>
+	</salesforce:sfdc-config>
+	<api-gateway:autodiscovery apiId="${muleConfig.apiId}" ignoreBasePath="true" doc:name="API Autodiscovery" doc:id="eeeb93eb-5a6f-41a6-a479-a09753d364b7" flowRef="main-main" />
+	<flow name="main-main">
+        <http:listener config-ref="main-httpListenerConfig" path="/api/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:router config-ref="main-config" />
+        <error-handler>
+            <on-error-propagate type="APIKIT:BAD_REQUEST">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Bad request"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">400</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:METHOD_NOT_ALLOWED">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Method not allowed"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">405</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_ACCEPTABLE">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not acceptable"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">406</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:UNSUPPORTED_MEDIA_TYPE">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Unsupported media type"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">415</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_IMPLEMENTED">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not Implemented"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">501</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="main-console">
+        <http:listener config-ref="main-httpListenerConfig" path="/console/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:console config-ref="main-config" />
+        <error-handler>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+	<flow name="get:\suppliers:main-config">
+		<flow-ref doc:name="FLOW: Query Suppliers" doc:id="f12a7b2d-f283-40b0-a71e-f08b467fbc41" name="suppliers__query"/>
+    </flow>
+    <flow name="get:\suppliers\(id):main-config">
+        <ee:transform doc:name="SET: id">
+            <ee:variables>
+                <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+		<flow-ref doc:name="FLOW: Get Supplier By Id" doc:id="12f50aaf-304c-4993-8554-36c142dc12b3" name="suppliers__find-one-by-id"/>
+    </flow>
+    <flow name="post:\suppliers:application\json:main-config">
+		<flow-ref doc:name="FLOW: Create Supplier" doc:id="7bb1bb38-a754-40c7-9b3e-525c6f568820" name="suppliers__create-one"/>
+    </flow>
+</mule>

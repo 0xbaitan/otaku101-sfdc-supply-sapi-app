@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:tracing="http://www.mulesoft.org/schema/mule/tracing" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:validation="http://www.mulesoft.org/schema/mule/validation"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/tracing http://www.mulesoft.org/schema/mule/tracing/current/mule-tracing.xsd">
+	<sub-flow name="validators\phone-numbers" doc:id="de0b3b1c-5291-4f8b-b0d0-d7157d8f2800" >
+		<set-variable value='#[%dw 2.0&#10;output application/java&#10;---&#10;vars."validators\phone-numbers:input"]' doc:name="SET: phoneNumbers" doc:id="ea7dff1c-f6c6-42bd-9aa9-010d9c0ba7e9" variableName="phoneNumbers"/>
+		<choice doc:name="CHOOSE: Subprocess by phoneNumbers Type" doc:id="09313b9d-28b8-42f9-bd23-fc9bec600fbd">
+			<when expression="#[vars.phoneNumbers is String]">
+				<validation:is-true doc:name="VALIDATE: Phone Number" doc:id="067fa34b-d2f3-4edd-ad02-575ccd6dba3f" expression="#[import isE164 from dataweave::util::Phone --- isE164(vars.phoneNumbers)]" message="#[&quot;The provided input: '$(vars.phoneNumbers)' is not in the expected format for a phone number&quot;]">
+					<error-mapping sourceType="VALIDATION:INVALID_BOOLEAN" targetType="VALIDATION_FAILURE:INVALID_PHONE_NUMBER" />
+				</validation:is-true>
+			</when>
+			<when expression="#[vars.phoneNumbers is Array&lt;String&gt;]">
+				<foreach doc:name="FOR EACH: Phone Number" doc:id="3dd9427f-00d7-4e53-8940-64b094ef1884" collection="#[vars.phoneNumbers as Array&lt;String&gt;]" counterVariableName="i">
+					<validation:is-true doc:name="VALIDATE: Phone Numbers" doc:id="b6e18f0a-d362-4538-8f28-01fbc15a700c" expression="#[import isE164 from dataweave::util::Phone --- isE164(payload)]" message="#[&quot;The provided input: '$(payload)' is not in the expected format for a phone number&quot;]">
+						<error-mapping sourceType="VALIDATION:INVALID_BOOLEAN" targetType="VALIDATION_FAILURE:INVALID_PHONE_NUMBER" />
+					</validation:is-true>
+				</foreach>
+			</when>
+			<when expression="#[vars.phoneNumbers == null]">
+				<logger level="WARN" doc:name="WARN: No Phone Numbers" doc:id="acb1e9fa-f9dc-488c-8622-a80ce0f3bbe7" message='#["No phone numbers found. Should be a string or array of strings to undergo validation"]' />
+			</when>
+			<otherwise>
+				<set-variable value="#[&quot;The provided input: '$(write(vars.phoneNumbers, 'application/json'))' needs to be a String, Array of Strings or Null (if not required). Got $(typeOf(vars.phoneNumbers)) &quot;]" doc:name="SET: errorMessage" doc:id="a5386a4c-260b-4314-adc6-8fc24a184454" variableName="errorMessage"/>
+				<raise-error doc:name="RAISE: Invalid Phone Number Error" doc:id="1f03ec40-7f4d-4aaa-8744-2535e3385f3f" type="VALIDATION_FAILURE:INVALID_PHONE_NUMBER" description="#[vars.errorMessage]"/>
+			</otherwise>
+		</choice>
+		<ee:transform doc:name="SET: output" doc:id="0debadae-3140-41a2-8ecd-1629812814d8" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	success: true
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</sub-flow>
+	<sub-flow name="validators\emails" doc:id="448acee6-2177-4f28-90ff-7ae625320435" >
+		<set-variable value='#[%dw 2.0&#10;output application/java&#10;---&#10;vars."validators\emails:input"]' doc:name="SET: emails" doc:id="35c3ec31-65a5-498f-a150-54cc842aed3a" variableName="emails"/>
+		<choice doc:name="CHOOSE: Subprocess by emails Type" doc:id="86a6eeea-2bb6-429b-87ad-6049c683f97e" >
+			<when expression="#[vars.emails is String]" >
+				<validation:is-email doc:name="VALIDATE: Email" doc:id="d4936462-c1ff-443a-ab90-348020bcf789" message="#[&quot;The provided input: '$(vars.emails as String)' is not in the expected format for an email&quot;]" email="#[vars.emails]">
+					<error-mapping sourceType="VALIDATION:INVALID_EMAIL" targetType="VALIDATION_FAILURE:INVALID_EMAIL" />
+				</validation:is-email>
+			</when>
+			<when expression="#[vars.emails is Array&lt;String&gt;]" >
+				<foreach doc:name="FOR EACH: Email" doc:id="9f7fe9be-6ed6-4022-8e73-d99a9dab9651" collection="#[vars.emails as Array&lt;String&gt;]" counterVariableName="i" >
+					<validation:is-email doc:name="VALIDATE: Emails" doc:id="b679f315-0942-4f28-9eaa-d545b9af2321" email="#[payload]" message="#[&quot;The provided input: '$(payload as String)' is not in the expected format for an email&quot;]">
+						<error-mapping sourceType="VALIDATION:INVALID_EMAIL" targetType="VALIDATION_FAILURE:INVALID_EMAIL" />
+					</validation:is-email>
+				</foreach>
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="INFO: No Emails" doc:id="5a7cc43d-b19f-463b-8708-b35a3e52986f" message='#["No emails numbers found. Should be a string or array of strings to undergo validation"]' />
+			</otherwise>
+		</choice>
+		<ee:transform doc:name="SET: output" doc:id="2420ed30-7920-43c3-b19e-474964bfc08e" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	success: true
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</sub-flow>
+</mule>

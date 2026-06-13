@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd">
+	<flow name="suppliers__create-one" doc:id="e3a94ccb-1a67-417c-a25f-144e376e2dbc">
+		<ee:transform doc:name="SET: Input Variables for Validation Flows" doc:id="1bc1c369-221f-447f-bc6e-bf0153b058c7">
+			<ee:message>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="validators\phone-numbers:input"><![CDATA[%dw 2.0
+output application/java
+---
+payload.phone default null]]></ee:set-variable>
+				<ee:set-variable variableName="validators\emails:input"><![CDATA[%dw 2.0
+output application/java
+---
+payload.email default null]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="FLOW: Validate Phone Number" doc:id="e00aac0b-d1dd-48d3-8540-ee885f6c7861" name="validators\phone-numbers" target="validators\phone-numbers:output" />
+		<flow-ref doc:name="FLOW: Validate Email" doc:id="d8a9a85a-44de-41c9-aa41-47a1674c7031" name="validators\emails" target="validators\emails:output" />
+		<try doc:name="Try" doc:id="d2cc7c69-a136-4a86-b7d8-027591bf9856" >
+			<salesforce:create doc:name="CREATE: Supplier" doc:id="8f790905-7724-4a25-a5b7-3e8acfb2d1e4" config-ref="SalesforceConfig" type="Account">
+			<salesforce:records><![CDATA[#[%dw 2.0
+---
+[{
+	Name: payload.name,
+	(Email__c: payload.email) if (payload.email != null),
+	(Phone: payload.phone) if (payload.phone != null),
+	(Website: payload.website) if (payload.website != null),
+	(Status__c: payload.status) if (payload.status != null)
+}]]]]></salesforce:records>
+		</salesforce:create>
+			<error-handler ref="error-handlers__handle-salesforce-failures" />
+		</try>
+		<ee:transform doc:name="SET: Success Payload &amp; 200 HTTP Status" doc:id="ebf06cb7-aea9-40b5-95b6-11eb91ac48ab">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	id: payload.items.id[0]
+}]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="httpStatus" ><![CDATA[%dw 2.0
+output application/java
+---
+200]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<error-handler ref="error-handlers__handle-validation-failures" />
+	</flow>
+	<flow name="suppliers__find-one-by-id" doc:id="0ddee6c0-61da-4ce5-91ff-6bca75797e51" >
+		<try doc:name="Try" doc:id="0002ef9a-560d-4f19-8026-927956fdc558" >
+			<salesforce:query doc:name="QUERY: Supplier by Id " doc:id="2c5bb4f1-7e23-4e8c-b6b4-716cfce5e82a" config-ref="SalesforceConfig">
+				<salesforce:salesforce-query ><![CDATA[SELECT Id, Name, Email__c, Phone, Website, Status__c FROM Account WHERE Id = ':id']]></salesforce:salesforce-query>
+				<salesforce:parameters ><![CDATA[#[output application/java
+---
+{
+	id : vars.id
+}]]]></salesforce:parameters>
+			</salesforce:query>
+			<error-handler ref="error-handlers__handle-salesforce-failures" />
+		</try>
+		<ee:transform doc:name="SET: Success Payload &amp; 200 HTTP Status" doc:id="5d36bf14-a7f7-4378-bde7-01ca731d3636" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+
+var item = payload[0]
+---
+{
+	id: item.Id,
+	name: item.Name,
+	email: item.Email__c,
+	phone: item.Phone,
+	website: item.Website,
+	status: item.Status__c
+}]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="httpStatus" ><![CDATA[%dw 2.0
+output application/java
+---
+200]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+	</flow>
+	<flow name="suppliers__query" doc:id="6561a53b-d0b2-4531-b1f4-9cb1e5fe0877" >
+		<try doc:name="Try" doc:id="2c554b59-e30b-4bd4-abbe-f33342cb1496" >
+			<salesforce:query-all doc:name="QUERY: Matching Suppliers " doc:id="11c7a96a-508e-43c9-b22a-3e8f8b2d01b2" config-ref="SalesforceConfig">
+				<salesforce:salesforce-query ><![CDATA[SELECT Id, Name, Email__c, Phone, Website, Status__c FROM Account ORDER BY Id ASC]]></salesforce:salesforce-query>
+			</salesforce:query-all>
+			<logger level="INFO" doc:name="Logger" doc:id="62cf4d29-0501-41ca-8c29-5b2081adc9b5" />
+			<error-handler ref="error-handlers__handle-salesforce-failures" />
+		</try>
+		<ee:transform doc:name="SET: Success Payload &amp; 200 HTTP Status" doc:id="9f244421-b093-47a0-bff2-5a497a62dc8d" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+
+---
+payload map {
+	id: $.Id,
+	name: $.Name,
+	email: $.Email__c,
+	phone: $.Phone,
+	website: $.Website,
+	status: $.Status__c
+}]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="httpStatus" ><![CDATA[%dw 2.0
+output application/java
+---
+200]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+	</flow>
+</mule>
