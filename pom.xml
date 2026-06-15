@@ -37,6 +37,12 @@
 					<classifier>mule-application</classifier>
 
 					<cloudhub2Deployment>
+						<uri>https://anypoint.mulesoft.com</uri>
+						<provider>MC</provider>
+						<replicas>1</replicas>
+						<vCores>0.1</vCores>
+						<objectStoreV2>true</objectStoreV2>
+						
 						<connectedAppClientId>${anypoint.clientId}</connectedAppClientId>
 						<connectedAppClientSecret>${anypoint.clientSecret}</connectedAppClientSecret>
 						<connectedAppGrantType>client_credentials</connectedAppGrantType>
@@ -47,12 +53,6 @@
 						<muleVersion>${anypoint.runtime}</muleVersion>
 						<region>${anypoint.region}</region>
 						<applicationName>${anypoint.appName}</applicationName>
-
-						<uri>https://anypoint.mulesoft.com</uri>
-						<provider>MC</provider>
-						<replicas>1</replicas>
-						<vCores>0.1</vCores>
-						<objectStoreV2>true</objectStoreV2>
 
 						<secureProperties>
 							<secure.key>${muleSecureKey}</secure.key>
