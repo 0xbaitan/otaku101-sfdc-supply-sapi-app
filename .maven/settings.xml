@@ -6,7 +6,7 @@
         <server>
             <id>anypoint-exchange-v3</id>
             <username>~~~Client~~~</username>
-            <password>${env.anypoint.clientId}~?~${env.anypoint.clientSecret}</password>
+            <password>${anypoint.clientId}~?~${anypoint.clientSecret}</password>
         </server>
     </servers>
 </settings>
