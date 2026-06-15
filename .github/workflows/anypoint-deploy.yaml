@@ -2,11 +2,12 @@ name: MuleSoft CloudHub 2.0 CI/CD
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
-  build-and-deploy:
+  test:
     runs-on: ubuntu-latest
 
     steps:
@@ -16,7 +17,7 @@ jobs:
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
-        distribution: 'zulu' # Azure/MuleSoft recommended OpenJDK distribution
+        distribution: 'zulu' 
         java-version: '17'
         cache: 'maven'
 
@@ -29,26 +30,111 @@ jobs:
           ${{ runner.os }}-maven-
 
     - name: Compile and Test
-      run: mvn clean test
+      env:
+        KEY: ${{ secrets.MULE_SECURE_KEY }} 
+        ANYPOINT_CLIENT_ID: ${{ secrets.ANYPOINT_CLIENT_ID }}
+        ANYPOINT_CLIENT_SECRET: ${{ secrets.ANYPOINT_CLIENT_SECRET }} 
+      run: |
+        mvn test --settings .maven/settings.xml \
+          -Dsecure.key="$KEY" \
+          -Danypoint.clientId="$ANYPOINT_CLIENT_ID" \
+          -Danypoint.clientSecret="$ANYPOINT_CLIENT_SECRET"
+
+    - name: Upload MUnit reports
+      if: always() # Ensures reports are uploaded even if tests fail
+      uses: actions/upload-artifact@v4
+      with:
+        name: munit-test-reports
+        path: target/site/munit/coverage/
+  
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Checkout this repo
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+        cache: 'maven'
+
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-maven-
+
+    - name: Build with Maven
+      run: mvn -B package --file pom.xml -DskipMunitTests
+
+    - name: Stamp artifact file name with commit hash
+      run: |
+        artifactName1=$(ls target/*.jar | head -1)
+        commitHash=$(git rev-parse --short "$GITHUB_SHA")
+        artifactName2=$(ls target/*.jar | head -1 | sed "s/.jar/-$commitHash.jar/g")
+        mv $artifactName1 $artifactName2
+
+    - name: Upload artifact 
+      uses: actions/upload-artifact@v4
+      with:
+        name: artifacts
+        path: target/*.jar
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:    
+
+    - name: Checkout this repo
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+        cache: 'maven'
+
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-maven-
+
+    - name: Download built artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: artifacts
 
     - name: Package and Deploy to CloudHub 2.0
       env:  
         ANYPOINT_CLIENT_ID: ${{ secrets.ANYPOINT_CLIENT_ID }}
         ANYPOINT_CLIENT_SECRET: ${{ secrets.ANYPOINT_CLIENT_SECRET }}
         MULE_SECURE_KEY: ${{ secrets.MULE_SECURE_KEY }}
-        
+
         ANYPOINT_ORG_ID: ${{ vars.ANYPOINT_ORG_ID }}
         ANYPOINT_ENV: ${{ vars.ANYPOINT_ENV }}
         ANYPOINT_TARGET_SPACE: ${{ vars.ANYPOINT_TARGET_SPACE }}
         ANYPOINT_RUNTIME: ${{ vars.ANYPOINT_RUNTIME }}
         ANYPOINT_REGION: ${{ vars.ANYPOINT_REGION }}
         ANYPOINT_APP_NAME: ${{ vars.ANYPOINT_APP_NAME }}
+
       run: |
-        mvn clean deploy -DmuleDeploy \
+        artifactName=$(ls *.jar | head -1)
+        mvn deploy -DmuleDeploy --settings .maven/settings.xml -DskipTests \
+            -Dmule.artifact=$artifactName \
             -Danypoint.clientId=$ANYPOINT_CLIENT_ID \
             -Danypoint.clientSecret=$ANYPOINT_CLIENT_SECRET \
             -Danypoint.orgId=$ANYPOINT_ORG_ID \
-            -DmuleSecureKey=$MULE_SECURE_KEY \
+            -Dsecure.key=$MULE_SECURE_KEY \
             -Danypoint.env=$ANYPOINT_ENV \
             -Danypoint.targetSpace=$ANYPOINT_TARGET_SPACE \
             -Danypoint.runtime=$ANYPOINT_RUNTIME \
