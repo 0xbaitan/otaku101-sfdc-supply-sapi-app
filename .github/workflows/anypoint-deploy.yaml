@@ -19,24 +19,46 @@ jobs:
         distribution: 'zulu' 
         java-version: '17'
 
-    - name: Cache Maven packages
+
+    - name: Cache Public Maven Packages
       uses: actions/cache@v4
       with:
         path: ~/.m2/repository
-        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        key: ${{ runner.os }}-public-maven-${{ hashFiles('**/pom.xml') }}
         restore-keys: |
-          ${{ runner.os }}-maven-
+          ${{ runner.os }}-public-maven-
 
-    - name: Compile and Test
+    - name: Configure Global Maven Settings
+      run: |
+        mkdir -p ~/.m2
+        cp .maven/settings.xml ~/.m2/settings.xml
+
+    - name: Run MUnit Tests
+      id: test_execution
+      continue-on-error: true # Prevents a 401 from killing the runner before caching happens
       env:
-        KEY: ${{ secrets.MULE_SECURE_KEY }} 
         ANYPOINT_CLIENT_ID: ${{ secrets.ANYPOINT_CLIENT_ID }}
         ANYPOINT_CLIENT_SECRET: ${{ secrets.ANYPOINT_CLIENT_SECRET }} 
+        KEY: ${{ secrets.MULE_SECURE_KEY }} 
       run: |
-        mvn test --settings .maven/settings.xml \
+        mvn test \
           -Dsecure.key="$KEY" \
           -Danypoint.clientId="$ANYPOINT_CLIENT_ID" \
           -Danypoint.clientSecret="$ANYPOINT_CLIENT_SECRET"
+
+    - name: Isolate and Purge Private Exchange Group Dependencies
+      if: always() # Runs even if the test step failed or hit a 401
+      run: |
+        echo "Purging private organization artifacts from cache folder..."
+        # This targets your specific Anypoint Organization ID directory inside the local maven cache
+        rm -rf ~/.m2/repository/365d8e9a-5b53-4d65-8776-8d29047c4ac6/
+        echo "Private assets cleared. Local cache is now strictly public open-source plugins."
+
+    - name: Check Test Execution Status
+      if: steps.test_execution.outcome == 'failure'
+      run: |
+        echo "The build failed during compilation/dependency checking due to Anypoint Credentials."
+        exit 1
 
     - name: Upload MUnit reports
       if: always()
