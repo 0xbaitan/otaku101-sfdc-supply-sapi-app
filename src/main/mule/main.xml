@@ -1,27 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<mule xmlns:api-gateway="http://www.mulesoft.org/schema/mule/api-gateway" xmlns:oauth="http://www.mulesoft.org/schema/mule/oauth" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns:salesforce-composite="http://www.mulesoft.org/schema/mule/salesforce-composite" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
+<mule xmlns:secure-properties="http://www.mulesoft.org/schema/mule/secure-properties" xmlns:api-gateway="http://www.mulesoft.org/schema/mule/api-gateway" xmlns:oauth="http://www.mulesoft.org/schema/mule/oauth" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns:salesforce-composite="http://www.mulesoft.org/schema/mule/salesforce-composite" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
 http://www.mulesoft.org/schema/mule/salesforce-composite http://www.mulesoft.org/schema/mule/salesforce-composite/current/mule-salesforce-composite.xsd
 http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
 http://www.mulesoft.org/schema/mule/oauth http://www.mulesoft.org/schema/mule/oauth/current/mule-oauth.xsd
-http://www.mulesoft.org/schema/mule/api-gateway http://www.mulesoft.org/schema/mule/api-gateway/current/mule-api-gateway.xsd">
+http://www.mulesoft.org/schema/mule/api-gateway http://www.mulesoft.org/schema/mule/api-gateway/current/mule-api-gateway.xsd
+http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/schema/mule/secure-properties/current/mule-secure-properties.xsd">
     <http:listener-config name="main-httpListenerConfig">
         <http:listener-connection host="0.0.0.0" port="8081" />
     </http:listener-config>
     <apikit:config name="main-config" api="resource::365d8e9a-5b53-4d65-8776-8d29047c4ac6:otaku101-sfdc-supply-sapi:1.0.1:raml:zip:main.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
     <salesforce-composite:composite-config name="SalesforceCompositeConfig" doc:name="Salesforce Composite Config" doc:id="2412b199-01d3-4e7e-b384-e3ea3b8471eb" >
 		<salesforce-composite:config-with-oauth-connection >
-			<salesforce-composite:oauth-authorization-code consumerKey="${salesforceCompositeConfig.clientId}" consumerSecret="${salesforceCompositeConfig.clientSecret}"/>
-			<salesforce-composite:oauth-callback-config listenerConfig="main-httpListenerConfig" callbackPath="${salesforceCompositeConfig.callbackUri}" authorizePath="${salesforceCompositeConfig.authorizeUri}" externalCallbackUrl="${salesforceCompositeConfig.externalCallbackUrl}"/>
+			<salesforce-composite:oauth-authorization-code consumerKey="${sf.client_id}" consumerSecret="${secure::sf.client_secret}"/>
+			<salesforce-composite:oauth-callback-config listenerConfig="main-httpListenerConfig" callbackPath="/api/oauth2/sf-composite/callback" authorizePath="/api/oauth2/sf-composite/authorize" externalCallbackUrl="${sf.domain}/api/oauth2/sf-composite/callback"/>
 		</salesforce-composite:config-with-oauth-connection>
 	</salesforce-composite:composite-config>
-	<configuration-properties doc:name="Configuration properties" doc:id="0f1c1a36-9842-48e8-b26c-92e41e5213c2" file="config.yaml" />
+	<configuration-properties doc:name="Configuration properties" doc:id="0f1c1a36-9842-48e8-b26c-92e41e5213c2" file="config-${mule.env}.yaml" />
 	<salesforce:sfdc-config name="SalesforceConfig" doc:name="Salesforce Config" doc:id="2c1ead3f-7833-4651-b30c-a6acdd7c0e26" >
 		<salesforce:config-with-oauth-connection >
-			<salesforce:oauth-authorization-code consumerKey="${salesforceConfig.clientId}" consumerSecret="${salesforceConfig.clientSecret}"/>
-			<salesforce:oauth-callback-config listenerConfig="main-httpListenerConfig" callbackPath="${salesforceConfig.callbackUri}" authorizePath="${salesforceConfig.authorizeUri}" externalCallbackUrl="${salesforceConfig.externalCallbackUrl}" />
+			<salesforce:oauth-authorization-code consumerKey="${sf.client_id}" consumerSecret="${secure::sf.client_secret}"/>
+			<salesforce:oauth-callback-config listenerConfig="main-httpListenerConfig" callbackPath="/api/oauth2/sf/callback" authorizePath="/api/oauth2/sf/authorize" externalCallbackUrl="${sf.domain}/api/oauth2/sf/callback" />
 		</salesforce:config-with-oauth-connection>
 	</salesforce:sfdc-config>
-	<api-gateway:autodiscovery apiId="${muleConfig.apiId}" ignoreBasePath="true" doc:name="API Autodiscovery" doc:id="eeeb93eb-5a6f-41a6-a479-a09753d364b7" flowRef="main-main" />
+	<api-gateway:autodiscovery apiId="${mule.api_id}" ignoreBasePath="true" doc:name="API Autodiscovery" doc:id="eeeb93eb-5a6f-41a6-a479-a09753d364b7" flowRef="main-main" />
+	<secure-properties:config name="SecurePropertiesConfigLocal" doc:name="Secure Properties Config" doc:id="b64894cd-c741-475e-8381-b2f50aabc186" file="config-local.yaml" key="${secure.key}" />
+	<secure-properties:config name="SecurePropertiesConfigSandbox" doc:name="Secure Properties Config" doc:id="e2a75202-cc96-4451-8f84-18390d9644d1" file="config-sandbox.yaml" key="${secure.key}" />
 	<flow name="main-main">
         <http:listener config-ref="main-httpListenerConfig" path="/api/*">
             <http:response statusCode="#[vars.httpStatus default 200]">

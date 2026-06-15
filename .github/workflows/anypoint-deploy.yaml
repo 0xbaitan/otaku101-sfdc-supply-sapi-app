@@ -1,0 +1,56 @@
+name: MuleSoft CloudHub 2.0 CI/CD
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu' # Azure/MuleSoft recommended OpenJDK distribution
+        java-version: '17'
+        cache: 'maven'
+
+    - name: Cache Maven packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-maven-
+
+    - name: Compile and Test
+      run: mvn clean test
+
+    - name: Package and Deploy to CloudHub 2.0
+      env:  
+        ANYPOINT_CLIENT_ID: ${{ secrets.ANYPOINT_CLIENT_ID }}
+        ANYPOINT_CLIENT_SECRET: ${{ secrets.ANYPOINT_CLIENT_SECRET }}
+        MULE_SECURE_KEY: ${{ secrets.MULE_SECURE_KEY }}
+        
+        ANYPOINT_ORG_ID: ${{ vars.ANYPOINT_ORG_ID }}
+        ANYPOINT_ENV: ${{ vars.ANYPOINT_ENV }}
+        ANYPOINT_TARGET_SPACE: ${{ vars.ANYPOINT_TARGET_SPACE }}
+        ANYPOINT_RUNTIME: ${{ vars.ANYPOINT_RUNTIME }}
+        ANYPOINT_REGION: ${{ vars.ANYPOINT_REGION }}
+        ANYPOINT_APP_NAME: ${{ vars.ANYPOINT_APP_NAME }}
+      run: |
+        mvn clean deploy -DmuleDeploy \
+            -Danypoint.clientId=$ANYPOINT_CLIENT_ID \
+            -Danypoint.clientSecret=$ANYPOINT_CLIENT_SECRET \
+            -Danypoint.orgId=$ANYPOINT_ORG_ID \
+            -DmuleSecureKey=$MULE_SECURE_KEY \
+            -Danypoint.env=$ANYPOINT_ENV \
+            -Danypoint.targetSpace=$ANYPOINT_TARGET_SPACE \
+            -Danypoint.runtime=$ANYPOINT_RUNTIME \
+            -Danypoint.region=$ANYPOINT_REGION \
+            -Danypoint.appName=$ANYPOINT_APP_NAME
