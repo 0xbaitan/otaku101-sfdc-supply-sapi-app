@@ -15,7 +15,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-		<app.runtime>4.11.5</app.runtime>
+		<app.runtime>4.11.0</app.runtime>
 		<mule.maven.plugin.version>4.7.0</mule.maven.plugin.version>
 		<munit.version>3.7.0</munit.version>
 	</properties>
@@ -31,7 +31,7 @@
 			<plugin>
 				<groupId>org.mule.tools.maven</groupId>
 				<artifactId>mule-maven-plugin</artifactId>
-				<version>4.3.0</version>
+				<version>${mule.maven.plugin.version}</version>
 				<extensions>true</extensions>
 				<configuration>
 					<classifier>mule-application</classifier>
@@ -39,10 +39,12 @@
 					<cloudhub2Deployment>
 						<uri>https://anypoint.mulesoft.com</uri>
 						<provider>MC</provider>
+
+						<server>anypoint-exchange-v3</server>
+
 						<replicas>1</replicas>
 						<vCores>0.1</vCores>
-						<objectStoreV2>true</objectStoreV2>
-						
+
 						<connectedAppClientId>${anypoint.clientId}</connectedAppClientId>
 						<connectedAppClientSecret>${anypoint.clientSecret}</connectedAppClientSecret>
 						<connectedAppGrantType>client_credentials</connectedAppGrantType>
@@ -51,11 +53,11 @@
 						<environment>${anypoint.env}</environment>
 						<target>${anypoint.targetSpace}</target>
 						<muleVersion>${anypoint.runtime}</muleVersion>
-						<region>${anypoint.region}</region>
+
 						<applicationName>${anypoint.appName}</applicationName>
 
 						<secureProperties>
-							<secure.key>${muleSecureKey}</secure.key>
+							<secure.key>${secure.key}</secure.key>
 						</secureProperties>
 					</cloudhub2Deployment>
 				</configuration>
