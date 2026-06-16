@@ -183,31 +183,20 @@ jobs:
           ANYPOINT_REGION: ${{ vars.ANYPOINT_REGION }}
           ANYPOINT_APP_NAME: ${{ vars.ANYPOINT_APP_NAME }}
         run: |
-        
-           CLEAN_APP_NAME=$(echo "$ANYPOINT_APP_NAME" | tr -d '\r\n' | xargs)
-           
 
-           JAR_FILE=$(ls target/*.jar | head -1)
-           echo "Found target artifact file to publish: $JAR_FILE"
+          CLEAN_APP_NAME=$(echo "$ANYPOINT_APP_NAME" | tr -d '\r\n' | xargs)
 
-          
-           mvn deploy:deploy-file --settings .maven/settings.xml \
-               -DrepositoryId=anypoint-exchange-v3 \
-               -Durl="https://maven.anypoint.mulesoft.com/api/v3/organizations/$ANYPOINT_ORG_ID/maven" \
-               -Dfile="$JAR_FILE" \
-               -DpomFile=pom.xml
-
-           
-           mvn mule:deploy --settings .maven/settings.xml \
-               -DmuleDeploy \
-               -DskipTests \
-               -Danypoint.clientId="$ANYPOINT_CLIENT_ID" \
-               -Danypoint.clientSecret="$ANYPOINT_CLIENT_SECRET" \
-               -Danypoint.orgId="$ANYPOINT_ORG_ID" \
-               -Dsecure.key="$MULE_SECURE_KEY" \
-               -Danypoint.env="$ANYPOINT_ENV" \
-               -Danypoint.targetSpace="$ANYPOINT_TARGET_SPACE" \
-               -Danypoint.runtime="$ANYPOINT_RUNTIME" \
-               -Danypoint.region="$ANYPOINT_REGION" \
-               -Danypoint.appName="$CLEAN_APP_NAME" \
-               -Dmule.env="$ANYPOINT_ENV"
+          mvn mule:deploy \
+            --settings .maven/settings.xml \
+            -DmuleDeploy \
+            -DskipTests \
+            -Danypoint.clientId="$ANYPOINT_CLIENT_ID" \
+            -Danypoint.clientSecret="$ANYPOINT_CLIENT_SECRET" \
+            -Danypoint.orgId="$ANYPOINT_ORG_ID" \
+            -Dsecure.key="$MULE_SECURE_KEY" \
+            -Danypoint.env="$ANYPOINT_ENV" \
+            -Danypoint.targetSpace="$ANYPOINT_TARGET_SPACE" \
+            -Danypoint.runtime="$ANYPOINT_RUNTIME" \
+            -Danypoint.region="$ANYPOINT_REGION" \
+            -Danypoint.appName="$CLEAN_APP_NAME" \
+            -Dmule.env="$ANYPOINT_ENV"
