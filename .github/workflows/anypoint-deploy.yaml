@@ -186,15 +186,17 @@ jobs:
           CLEAN_APP_NAME=$(echo "$ANYPOINT_APP_NAME" | tr -d '\r\n' | xargs)
 
           echo "Deploying $CLEAN_APP_NAME to Anypoint Exchange and CloudHub 2.0"
-          mvn deploy --file pom.xml --settings .maven/settings.xml \
+          mvn deploy -DmuleDeploy --settings .maven/settings.xml \
             -DskipTests \
+            -Dmaven.compiler.skip=true \
+            -Dmaven.resources.skip=true \
             -Danypoint.clientId="$ANYPOINT_CLIENT_ID" \
             -Danypoint.clientSecret="$ANYPOINT_CLIENT_SECRET" \
-            -Dmule.env="$MULE_ENV" \
-            -Dsecure.key="$MULE_SECURE_KEY" \
             -Danypoint.orgId="$ANYPOINT_ORG_ID" \
+            -Dsecure.key="$MULE_SECURE_KEY" \
             -Danypoint.env="$ANYPOINT_ENV" \
             -Danypoint.targetSpace="$ANYPOINT_TARGET_SPACE" \
             -Danypoint.runtime="$ANYPOINT_RUNTIME" \
             -Danypoint.region="$ANYPOINT_REGION" \
-            -Danypoint.appName="$CLEAN_APP_NAME"
+            -Danypoint.appName="$CLEAN_APP_NAME" \
+            -Dmule.env="$ANYPOINT_ENV"
