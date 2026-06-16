@@ -23,8 +23,7 @@ http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/sc
 		</salesforce:config-with-oauth-connection>
 	</salesforce:sfdc-config>
 	<api-gateway:autodiscovery apiId="${mule.api_id}" ignoreBasePath="true" doc:name="API Autodiscovery" doc:id="eeeb93eb-5a6f-41a6-a479-a09753d364b7" flowRef="main-main" />
-	<secure-properties:config name="SecurePropertiesConfigLocal" doc:name="Secure Properties Config" doc:id="b64894cd-c741-475e-8381-b2f50aabc186" file="config-local.yaml" key="${secure.key}" />
-	<secure-properties:config name="SecurePropertiesConfigSandbox" doc:name="Secure Properties Config" doc:id="e2a75202-cc96-4451-8f84-18390d9644d1" file="config-sandbox.yaml" key="${secure.key}" />
+	<secure-properties:config name="SecurePropertiesConfig" doc:name="Secure Properties Config" doc:id="b64894cd-c741-475e-8381-b2f50aabc186" file="config-${mule.env}.yaml" key="${secure.key}" />
 	<flow name="main-main">
         <http:listener config-ref="main-httpListenerConfig" path="/api/*">
             <http:response statusCode="#[vars.httpStatus default 200]">
