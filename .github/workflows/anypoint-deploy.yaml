@@ -183,10 +183,7 @@ jobs:
         ANYPOINT_REGION: ${{ vars.ANYPOINT_REGION }}
         ANYPOINT_APP_NAME: ${{ vars.ANYPOINT_APP_NAME }}
       run: |
-        echo "=== DEBUGGING HIDDEN CHARACTERS ==="
-        echo -n "${{ vars.ANYPOINT_APP_NAME }}" | od -c
-        echo "==================================="
-        
+        SANITISED_APP_NAME=$(echo "$ANYPOINT_APP_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]//g')
         artifactName=$(ls *.jar | head -1)
         mvn deploy -DmuleDeploy --settings .maven/settings.xml \
             -DskipTests \
@@ -200,5 +197,5 @@ jobs:
             -Danypoint.targetSpace="$ANYPOINT_TARGET_SPACE" \
             -Danypoint.runtime="$ANYPOINT_RUNTIME" \
             -Danypoint.region="$ANYPOINT_REGION" \
-            -Danypoint.appName="$ANYPOINT_APP_NAME" \
+            -Danypoint.appName="$SANITISED_APP_NAME" \
             -Dmule.env="$MULE_ENV"
