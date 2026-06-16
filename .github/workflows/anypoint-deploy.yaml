@@ -38,14 +38,14 @@ jobs:
       env:
         ANYPOINT_CLIENT_ID: ${{ secrets.ANYPOINT_CLIENT_ID }}
         ANYPOINT_CLIENT_SECRET: ${{ secrets.ANYPOINT_CLIENT_SECRET }} 
-        ENV: ${{ vars.ANYPOINT_ENV }}
-        KEY: ${{ secrets.MULE_SECURE_KEY }}
+        MULE_ENV: ${{ vars.MULE_ENV }}
+        MULE_SECURE_KEY: ${{ secrets.MULE_SECURE_KEY }}
       run: |
         mvn dependency:go-offline --file pom.xml --settings .maven/settings.xml \
           -Danypoint.clientId="$ANYPOINT_CLIENT_ID" \
           -Danypoint.clientSecret="$ANYPOINT_CLIENT_SECRET" \
-          -Dmule.env="$ENV" \
-          -Dsecure.key="$KEY"
+          -Dmule.env="$MULE_ENV" \
+          -Dsecure.key="$MULE_SECURE_KEY"
 
   # STEP 2: Strict execution stage leveraging the fresh public repository cache
   test:
@@ -80,13 +80,13 @@ jobs:
         ANYPOINT_CLIENT_ID: ${{ secrets.ANYPOINT_CLIENT_ID }}
         ANYPOINT_CLIENT_SECRET: ${{ secrets.ANYPOINT_CLIENT_SECRET }} 
         KEY: ${{ secrets.MULE_SECURE_KEY }} 
-        ENV: ${{ vars.ANYPOINT_ENV }}
+        MULE_ENV: ${{ vars.MULE_ENV }} 
       run: |
         mvn test --file pom.xml --settings .maven/settings.xml \
           -Dsecure.key="$KEY" \
           -Danypoint.clientId="$ANYPOINT_CLIENT_ID" \
           -Danypoint.clientSecret="$ANYPOINT_CLIENT_SECRET" \
-          -Dmule.env="$ENV"
+          -Dmule.env="$MULE_ENV"
 
     - name: Upload MUnit reports
       if: always()
@@ -175,6 +175,7 @@ jobs:
         ANYPOINT_CLIENT_ID: ${{ secrets.ANYPOINT_CLIENT_ID }}
         ANYPOINT_CLIENT_SECRET: ${{ secrets.ANYPOINT_CLIENT_SECRET }}
         MULE_SECURE_KEY: ${{ secrets.MULE_SECURE_KEY }}
+        MULE_ENV: ${{ vars.MULE_ENV }}
         ANYPOINT_ORG_ID: ${{ vars.ANYPOINT_ORG_ID }}
         ANYPOINT_ENV: ${{ vars.ANYPOINT_ENV }}
         ANYPOINT_TARGET_SPACE: ${{ vars.ANYPOINT_TARGET_SPACE }}
@@ -196,4 +197,4 @@ jobs:
             -Danypoint.runtime=$ANYPOINT_RUNTIME \
             -Danypoint.region=$ANYPOINT_REGION \
             -Danypoint.appName=$ANYPOINT_APP_NAME \
-            -Dmule.env=$ANYPOINT_ENV
+            -Dmule.env=$MULE_ENV
