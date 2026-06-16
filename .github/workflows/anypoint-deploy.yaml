@@ -131,20 +131,13 @@ jobs:
             -Dmule.env="$ENV" \
             -Dsecure.key="$KEY"
 
-      - name: Stamp artifact file name with commit hash
-        run: |
-          artifactName1=$(ls target/*.jar | head -1)
-          commitHash=$(git rev-parse --short "$GITHUB_SHA")
-          artifactName2=$(ls target/*.jar | head -1 | sed "s/.jar/-$commitHash.jar/g")
-          mv $artifactName1 $artifactName2
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: artifacts
           path: target/*.jar
 
-  deploy:
+  publish-to-exchange:
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -170,40 +163,11 @@ jobs:
           name: artifacts
           path: target
 
-      - name: Package and Deploy to Anypoint Exchange and CloudHub 2.0
+      - name: Publish to Anypoint Exchange
         env:
           ANYPOINT_CLIENT_ID: ${{ secrets.ANYPOINT_CLIENT_ID }}
           ANYPOINT_CLIENT_SECRET: ${{ secrets.ANYPOINT_CLIENT_SECRET }}
-          MULE_SECURE_KEY: ${{ secrets.MULE_SECURE_KEY }}
-          MULE_ENV: ${{ vars.MULE_ENV }}
-          ANYPOINT_ORG_ID: ${{ vars.ANYPOINT_ORG_ID }}
-          ANYPOINT_ENV: ${{ vars.ANYPOINT_ENV }}
-          ANYPOINT_TARGET_SPACE: ${{ vars.ANYPOINT_TARGET_SPACE }}
-          ANYPOINT_RUNTIME: ${{ vars.ANYPOINT_RUNTIME }}
-          ANYPOINT_REGION: ${{ vars.ANYPOINT_REGION }}
-          ANYPOINT_APP_NAME: ${{ vars.ANYPOINT_APP_NAME }}
         run: |
-
-            # 1. Clean trailing lines out of the app name
-            CLEAN_APP_NAME=$(echo "$ANYPOINT_APP_NAME" | tr -d '\r\n' | xargs)
-            
-            # 2. Find the exact path of the pre-built snapshot jar file dynamically
-            TARGET_JAR=$(ls target/*.jar | head -1)
-            echo "Targeting pre-built artifact: $TARGET_JAR"
-            
-            # 3. Trigger deployment, passing the explicit artifact path
-            mvn deploy -DmuleDeploy --settings .maven/settings.xml \
-                -DskipTests \
-                -Dmaven.compiler.skip=true \
-                -Dmaven.resources.skip=true \
-                -Dmule.artifact="$TARGET_JAR" \
-                -Danypoint.clientId="$ANYPOINT_CLIENT_ID" \
-                -Danypoint.clientSecret="$ANYPOINT_CLIENT_SECRET" \
-                -Danypoint.orgId="$ANYPOINT_ORG_ID" \
-                -Dsecure.key="$MULE_SECURE_KEY" \
-                -Danypoint.env="$ANYPOINT_ENV" \
-                -Danypoint.targetSpace="$ANYPOINT_TARGET_SPACE" \
-                -Danypoint.runtime="$ANYPOINT_RUNTIME" \
-                -Danypoint.region="$ANYPOINT_REGION" \
-                -Danypoint.appName="$CLEAN_APP_NAME" \
-                -Dmule.env="$ANYPOINT_ENV"
+          mvn deploy --file pom.xml --settings .maven/settings.xml \
+            -Danypoint.clientId="$ANYPOINT_CLIENT_ID" \
+            -Danypoint.clientSecret="$ANYPOINT_CLIENT_SECRET" \
