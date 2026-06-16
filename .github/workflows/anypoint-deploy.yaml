@@ -187,14 +187,14 @@ jobs:
         mvn deploy -DmuleDeploy --settings .maven/settings.xml \
             -DskipTests \
             -Dmaven.main.skip=true \
-            -Dmule.artifact=$artifactName \
-            -Danypoint.clientId=$ANYPOINT_CLIENT_ID \
-            -Danypoint.clientSecret=$ANYPOINT_CLIENT_SECRET \
-            -Danypoint.orgId=$ANYPOINT_ORG_ID \
-            -Dsecure.key=$MULE_SECURE_KEY \
-            -Danypoint.env=$ANYPOINT_ENV \
-            -Danypoint.targetSpace=$ANYPOINT_TARGET_SPACE \
-            -Danypoint.runtime=$ANYPOINT_RUNTIME \
-            -Danypoint.region=$ANYPOINT_REGION \
-            -Danypoint.appName=$ANYPOINT_APP_NAME \
-            -Dmule.env=$MULE_ENV
+            -Dmule.artifact="$artifactName" \
+            -Danypoint.clientId="$ANYPOINT_CLIENT_ID" \
+            -Danypoint.clientSecret="$ANYPOINT_CLIENT_SECRET" \
+            -Danypoint.orgId="$ANYPOINT_ORG_ID" \
+            -Dsecure.key="$MULE_SECURE_KEY" \
+            -Danypoint.env="$ANYPOINT_ENV" \
+            -Danypoint.targetSpace="$ANYPOINT_TARGET_SPACE" \
+            -Danypoint.runtime="$ANYPOINT_RUNTIME" \
+            -Danypoint.region="$ANYPOINT_REGION" \
+            -Danypoint.appName="$ANYPOINT_APP_NAME" \
+            -Dmule.env="$MULE_ENV"
