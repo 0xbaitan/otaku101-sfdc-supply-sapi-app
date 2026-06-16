@@ -183,6 +183,10 @@ jobs:
         ANYPOINT_REGION: ${{ vars.ANYPOINT_REGION }}
         ANYPOINT_APP_NAME: ${{ vars.ANYPOINT_APP_NAME }}
       run: |
+        echo "=== DEBUGGING HIDDEN CHARACTERS ==="
+        echo -n "${{ vars.ANYPOINT_APP_NAME }}" | od -c
+        echo "==================================="
+        
         artifactName=$(ls *.jar | head -1)
         mvn deploy -DmuleDeploy --settings .maven/settings.xml \
             -DskipTests \
