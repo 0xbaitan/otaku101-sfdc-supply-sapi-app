@@ -78,6 +78,10 @@
 					</execution>
 				</executions>
 				<configuration>
+					<systemPropertyVariables>
+						<mule.env>local</mule.env>
+						<secure.key>${secure.key}</secure.key>
+					</systemPropertyVariables>
 					<coverage>
 						<runCoverage>true</runCoverage>
 						<formats>
