@@ -183,13 +183,19 @@ jobs:
           ANYPOINT_APP_NAME: ${{ vars.ANYPOINT_APP_NAME }}
         run: |
 
-          CLEAN_APP_NAME=$(echo "$ANYPOINT_APP_NAME" | tr -d '\r\n' | xargs)
-
-          echo "Deploying $CLEAN_APP_NAME to Anypoint Exchange and CloudHub 2.0"
-          mvn deploy -DmuleDeploy --settings .maven/settings.xml \
+         # 1. Clean trailing lines out of the app name
+        CLEAN_APP_NAME=$(echo "$ANYPOINT_APP_NAME" | tr -d '\r\n' | xargs)
+        
+        # 2. Find the exact path of the pre-built snapshot jar file dynamically
+        TARGET_JAR=$(ls target/*.jar | head -1)
+        echo "Targeting pre-built artifact: $TARGET_JAR"
+        
+        # 3. Trigger deployment, passing the explicit artifact path
+        mvn deploy -DmuleDeploy --settings .maven/settings.xml \
             -DskipTests \
             -Dmaven.compiler.skip=true \
             -Dmaven.resources.skip=true \
+            -Dmule.artifact="$TARGET_JAR" \
             -Danypoint.clientId="$ANYPOINT_CLIENT_ID" \
             -Danypoint.clientSecret="$ANYPOINT_CLIENT_SECRET" \
             -Danypoint.orgId="$ANYPOINT_ORG_ID" \
