@@ -36,14 +36,18 @@ jobs:
       # Download all open-source and plugin assets without running logic or unit tests
       - name: Pre-install core plugins and dependencies
         env:
-          ANYPOINT_CLIENT_ID: ${{ secrets.ANYPOINT_CLIENT_ID }}
-          ANYPOINT_CLIENT_SECRET: ${{ secrets.ANYPOINT_CLIENT_SECRET }}
+          ANYPOINT_CONNAPP_CLIENT_ID: ${{ secrets.ANYPOINT_CONNAPP_CLIENT_ID }}
+          ANYPOINT_CONNAPP_CLIENT_SECRET: ${{ secrets.ANYPOINT_CONNAPP_CLIENT_SECRET }}
+          ANYPOINT_PLATFORM_CLIENT_ID: ${{ secrets.ANYPOINT_PLATFORM_CLIENT_ID }}
+          ANYPOINT_PLATFORM_CLIENT_SECRET: ${{ secrets.ANYPOINT_PLATFORM_CLIENT_SECRET }}
           MULE_ENV: ${{ vars.MULE_ENV }}
           MULE_SECURE_KEY: ${{ secrets.MULE_SECURE_KEY }}
         run: |
           mvn dependency:go-offline --file pom.xml --settings .maven/settings.xml \
-            -Danypoint.clientId="$ANYPOINT_CLIENT_ID" \
-            -Danypoint.clientSecret="$ANYPOINT_CLIENT_SECRET" \
+            -Danypoint.connApp.clientId="$ANYPOINT_CONNAPP_CLIENT_ID" \
+            -Danypoint.connApp.clientSecret="$ANYPOINT_CONNAPP_CLIENT_SECRET" \
+            -Danypoint.platform.clientId="$ANYPOINT_PLATFORM_CLIENT_ID" \
+            -Danypoint.platform.clientSecret="$ANYPOINT_PLATFORM_CLIENT_SECRET" \
             -Dmule.env="$MULE_ENV" \
             -Dsecure.key="$MULE_SECURE_KEY"
 
@@ -77,15 +81,19 @@ jobs:
       - name: Run MUnit Tests
         id: test_execution
         env:
-          ANYPOINT_CLIENT_ID: ${{ secrets.ANYPOINT_CLIENT_ID }}
-          ANYPOINT_CLIENT_SECRET: ${{ secrets.ANYPOINT_CLIENT_SECRET }}
+          ANYPOINT_PLATFORM_CLIENT_ID: ${{ secrets.ANYPOINT_PLATFORM_CLIENT_ID }}
+          ANYPOINT_PLATFORM_CLIENT_SECRET: ${{ secrets.ANYPOINT_PLATFORM_CLIENT_SECRET }}
+          ANYPOINT_CONNAPP_CLIENT_ID: ${{ secrets.ANYPOINT_CONNAPP_CLIENT_ID }}
+          ANYPOINT_CONNAPP_CLIENT_SECRET: ${{ secrets.ANYPOINT_CONNAPP_CLIENT_SECRET }}
           KEY: ${{ secrets.MULE_SECURE_KEY }}
           MULE_ENV: ${{ vars.MULE_ENV }}
         run: |
           mvn test --file pom.xml --settings .maven/settings.xml \
             -Dsecure.key="$KEY" \
-            -Danypoint.clientId="$ANYPOINT_CLIENT_ID" \
-            -Danypoint.clientSecret="$ANYPOINT_CLIENT_SECRET" \
+            -Danypoint.platform.clientId="$ANYPOINT_PLATFORM_CLIENT_ID" \
+            -Danypoint.platform.clientSecret="$ANYPOINT_PLATFORM_CLIENT_SECRET" \
+            -Danypoint.connApp.clientId="$ANYPOINT_CONNAPP_CLIENT_ID" \
+            -Danypoint.connApp.clientSecret="$ANYPOINT_CONNAPP_CLIENT_SECRET" \
             -Dmule.env="$MULE_ENV"
 
       - name: Upload MUnit reports
@@ -124,15 +132,19 @@ jobs:
 
       - name: Build with Maven
         env:
-          ANYPOINT_CLIENT_ID: ${{ secrets.ANYPOINT_CLIENT_ID }}
-          ANYPOINT_CLIENT_SECRET: ${{ secrets.ANYPOINT_CLIENT_SECRET }}
+          ANYPOINT_PLATFORM_CLIENT_ID: ${{ secrets.ANYPOINT_PLATFORM_CLIENT_ID }}
+          ANYPOINT_PLATFORM_CLIENT_SECRET: ${{ secrets.ANYPOINT_PLATFORM_CLIENT_SECRET }}
+          ANYPOINT_CONNAPP_CLIENT_ID: ${{ secrets.ANYPOINT_CONNAPP_CLIENT_ID }}
+          ANYPOINT_CONNAPP_CLIENT_SECRET: ${{ secrets.ANYPOINT_CONNAPP_CLIENT_SECRET }}
           ENV: ${{ vars.ANYPOINT_ENV }}
           KEY: ${{ secrets.MULE_SECURE_KEY }}
         run: |
           mvn -B package --file pom.xml --settings .maven/settings.xml \
             -DskipMunitTests \
-            -Danypoint.clientId="$ANYPOINT_CLIENT_ID" \
-            -Danypoint.clientSecret="$ANYPOINT_CLIENT_SECRET" \
+            -Danypoint.platform.clientId="$ANYPOINT_PLATFORM_CLIENT_ID" \
+            -Danypoint.platform.clientSecret="$ANYPOINT_PLATFORM_CLIENT_SECRET" \
+            -Danypoint.connApp.clientId="$ANYPOINT_CONNAPP_CLIENT_ID" \
+            -Danypoint.connApp.clientSecret="$ANYPOINT_CONNAPP_CLIENT_SECRET" \
             -Dmule.env="$ENV" \
             -Dsecure.key="$KEY"
 
@@ -175,15 +187,19 @@ jobs:
 
       - name: Publish to Anypoint Exchange
         env:
-          ANYPOINT_CLIENT_ID: ${{ secrets.ANYPOINT_CLIENT_ID }}
-          ANYPOINT_CLIENT_SECRET: ${{ secrets.ANYPOINT_CLIENT_SECRET }}
+          ANYPOINT_CONNAPP_CLIENT_ID: ${{ secrets.ANYPOINT_CONNAPP_CLIENT_ID }}
+          ANYPOINT_CONNAPP_CLIENT_SECRET: ${{ secrets.ANYPOINT_CONNAPP_CLIENT_SECRET }}
+          ANYPOINT_PLATFORM_CLIENT_ID: ${{ secrets.ANYPOINT_PLATFORM_CLIENT_ID }}
+          ANYPOINT_PLATFORM_CLIENT_SECRET: ${{ secrets.ANYPOINT_PLATFORM_CLIENT_SECRET }}
         run: |
           mvn deploy --file pom.xml --settings .maven/settings.xml \
             -DskipTests \
             -DskipMuleDeployment=true \
             -Dmaven.main.skip=true \
-            -Danypoint.clientId="$ANYPOINT_CLIENT_ID" \
-            -Danypoint.clientSecret="$ANYPOINT_CLIENT_SECRET"
+            -Danypoint.connApp.clientId="$ANYPOINT_CONNAPP_CLIENT_ID" \
+            -Danypoint.connApp.clientSecret="$ANYPOINT_CONNAPP_CLIENT_SECRET" \
+            -Danypoint.platform.clientId="$ANYPOINT_PLATFORM_CLIENT_ID" \
+            -Danypoint.platform.clientSecret="$ANYPOINT_PLATFORM_CLIENT_SECRET"
 
   deploy-to-cloudhub:
     needs: publish-to-exchange
@@ -213,8 +229,10 @@ jobs:
 
       - name: Deploy to CloudHub
         env:
-          ANYPOINT_CLIENT_ID: ${{ secrets.ANYPOINT_CLIENT_ID }}
-          ANYPOINT_CLIENT_SECRET: ${{ secrets.ANYPOINT_CLIENT_SECRET }}
+          ANYPOINT_CONNAPP_CLIENT_ID: ${{ secrets.ANYPOINT_CONNAPP_CLIENT_ID }}
+          ANYPOINT_CONNAPP_CLIENT_SECRET: ${{ secrets.ANYPOINT_CONNAPP_CLIENT_SECRET }}
+          ANYPOINT_PLATFORM_CLIENT_ID: ${{ secrets.ANYPOINT_PLATFORM_CLIENT_ID }}
+          ANYPOINT_PLATFORM_CLIENT_SECRET: ${{ secrets.ANYPOINT_PLATFORM_CLIENT_SECRET }}
 
           ANYPOINT_ENV: ${{ vars.ANYPOINT_ENV }}
           ANYPOINT_TARGET_SPACE: ${{ vars.ANYPOINT_TARGET_SPACE }}
@@ -232,8 +250,10 @@ jobs:
           mvn mule:deploy --file pom.xml --settings .maven/settings.xml \
             -DskipTests \
             -Dmaven.main.skip=true \
-            -Danypoint.clientId="$ANYPOINT_CLIENT_ID" \
-            -Danypoint.clientSecret="$ANYPOINT_CLIENT_SECRET" \
+            -Danypoint.platform.clientId="$ANYPOINT_PLATFORM_CLIENT_ID" \
+            -Danypoint.platform.clientSecret="$ANYPOINT_PLATFORM_CLIENT_SECRET" \
+            -Danypoint.connApp.clientId="$ANYPOINT_CONNAPP_CLIENT_ID" \
+            -Danypoint.connApp.clientSecret="$ANYPOINT_CONNAPP_CLIENT_SECRET" \
             -Dmule.env="$MULE_ENV" \
             -Dsecure.key="$MULE_SECURE_KEY" \
             -Danypoint.env="$ANYPOINT_ENV" \
