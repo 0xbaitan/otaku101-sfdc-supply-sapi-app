@@ -2,200 +2,212 @@ name: MuleSoft CloudHub 2.0 CI/CD
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   # STEP 1: Cold installation phase to safely build up the core public cache
   install_dependencies:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'zulu' 
-        java-version: '17'
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: "zulu"
+          java-version: "17"
 
-    - name: Cache Public Maven Packages
-      uses: actions/cache@v4
-      with:
-        path: ~/.m2/repository
-        key: ${{ runner.os }}-public-maven-${{ hashFiles('**/pom.xml') }}
-        restore-keys: |
-          ${{ runner.os }}-public-maven-
+      - name: Cache Public Maven Packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-public-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-public-maven-
 
-    - name: Configure Global Maven Settings
-      run: |
-        mkdir -p ~/.m2
-        cp .maven/settings.xml ~/.m2/settings.xml
+      - name: Configure Global Maven Settings
+        run: |
+          mkdir -p ~/.m2
+          cp .maven/settings.xml ~/.m2/settings.xml
 
-    # Download all open-source and plugin assets without running logic or unit tests
-    - name: Pre-install core plugins and dependencies
-      env:
-        ANYPOINT_CLIENT_ID: ${{ secrets.ANYPOINT_CLIENT_ID }}
-        ANYPOINT_CLIENT_SECRET: ${{ secrets.ANYPOINT_CLIENT_SECRET }} 
-        MULE_ENV: ${{ vars.MULE_ENV }}
-        MULE_SECURE_KEY: ${{ secrets.MULE_SECURE_KEY }}
-      run: |
-        mvn dependency:go-offline --file pom.xml --settings .maven/settings.xml \
-          -Danypoint.clientId="$ANYPOINT_CLIENT_ID" \
-          -Danypoint.clientSecret="$ANYPOINT_CLIENT_SECRET" \
-          -Dmule.env="$MULE_ENV" \
-          -Dsecure.key="$MULE_SECURE_KEY"
+      # Download all open-source and plugin assets without running logic or unit tests
+      - name: Pre-install core plugins and dependencies
+        env:
+          ANYPOINT_CLIENT_ID: ${{ secrets.ANYPOINT_CLIENT_ID }}
+          ANYPOINT_CLIENT_SECRET: ${{ secrets.ANYPOINT_CLIENT_SECRET }}
+          MULE_ENV: ${{ vars.MULE_ENV }}
+          MULE_SECURE_KEY: ${{ secrets.MULE_SECURE_KEY }}
+        run: |
+          mvn dependency:go-offline --file pom.xml --settings .maven/settings.xml \
+            -Danypoint.clientId="$ANYPOINT_CLIENT_ID" \
+            -Danypoint.clientSecret="$ANYPOINT_CLIENT_SECRET" \
+            -Dmule.env="$MULE_ENV" \
+            -Dsecure.key="$MULE_SECURE_KEY"
 
   # STEP 2: Strict execution stage leveraging the fresh public repository cache
   test:
     needs: install_dependencies
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'zulu' 
-        java-version: '17'
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: "zulu"
+          java-version: "17"
 
-    - name: Cache Public Maven Packages
-      uses: actions/cache@v4
-      with:
-        path: ~/.m2/repository
-        key: ${{ runner.os }}-public-maven-${{ hashFiles('**/pom.xml') }}
-        restore-keys: |
-          ${{ runner.os }}-public-maven-
+      - name: Cache Public Maven Packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-public-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-public-maven-
 
-    - name: Configure Global Maven Settings
-      run: |
-        mkdir -p ~/.m2
-        cp .maven/settings.xml ~/.m2/settings.xml
+      - name: Configure Global Maven Settings
+        run: |
+          mkdir -p ~/.m2
+          cp .maven/settings.xml ~/.m2/settings.xml
 
-    - name: Run MUnit Tests
-      id: test_execution
-      env:
-        ANYPOINT_CLIENT_ID: ${{ secrets.ANYPOINT_CLIENT_ID }}
-        ANYPOINT_CLIENT_SECRET: ${{ secrets.ANYPOINT_CLIENT_SECRET }} 
-        KEY: ${{ secrets.MULE_SECURE_KEY }} 
-        MULE_ENV: ${{ vars.MULE_ENV }} 
-      run: |
-        mvn test --file pom.xml --settings .maven/settings.xml \
-          -Dsecure.key="$KEY" \
-          -Danypoint.clientId="$ANYPOINT_CLIENT_ID" \
-          -Danypoint.clientSecret="$ANYPOINT_CLIENT_SECRET" \
-          -Dmule.env="$MULE_ENV"
+      - name: Run MUnit Tests
+        id: test_execution
+        env:
+          ANYPOINT_CLIENT_ID: ${{ secrets.ANYPOINT_CLIENT_ID }}
+          ANYPOINT_CLIENT_SECRET: ${{ secrets.ANYPOINT_CLIENT_SECRET }}
+          KEY: ${{ secrets.MULE_SECURE_KEY }}
+          MULE_ENV: ${{ vars.MULE_ENV }}
+        run: |
+          mvn test --file pom.xml --settings .maven/settings.xml \
+            -Dsecure.key="$KEY" \
+            -Danypoint.clientId="$ANYPOINT_CLIENT_ID" \
+            -Danypoint.clientSecret="$ANYPOINT_CLIENT_SECRET" \
+            -Dmule.env="$MULE_ENV"
 
-    - name: Upload MUnit reports
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: munit-test-reports
-        path: target/site/munit/coverage/
-  
+      - name: Upload MUnit reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: munit-test-reports
+          path: target/site/munit/coverage/
+
   # STEP 3: Compiles and structures final production package binary
   build:
     needs: test
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout this repo
-      uses: actions/checkout@v4
+      - name: Checkout this repo
+        uses: actions/checkout@v4
 
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'zulu'
-        java-version: '17'
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: "zulu"
+          java-version: "17"
 
-    - name: Cache dependencies
-      uses: actions/cache@v4
-      with:
-        path: ~/.m2/repository
-        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-        restore-keys: |
-          ${{ runner.os }}-maven-
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
 
-    - name: Build with Maven
-      env:
-        ANYPOINT_CLIENT_ID: ${{ secrets.ANYPOINT_CLIENT_ID }}
-        ANYPOINT_CLIENT_SECRET: ${{ secrets.ANYPOINT_CLIENT_SECRET }}
-        ENV: ${{ vars.ANYPOINT_ENV }}
-        KEY: ${{ secrets.MULE_SECURE_KEY }}
-      run: |
-        mvn -B package --file pom.xml --settings .maven/settings.xml \
-          -DskipMunitTests \
-          -Danypoint.clientId="$ANYPOINT_CLIENT_ID" \
-          -Danypoint.clientSecret="$ANYPOINT_CLIENT_SECRET" \
-          -Dmule.env="$ENV" \
-          -Dsecure.key="$KEY"
+      - name: Build with Maven
+        env:
+          ANYPOINT_CLIENT_ID: ${{ secrets.ANYPOINT_CLIENT_ID }}
+          ANYPOINT_CLIENT_SECRET: ${{ secrets.ANYPOINT_CLIENT_SECRET }}
+          ENV: ${{ vars.ANYPOINT_ENV }}
+          KEY: ${{ secrets.MULE_SECURE_KEY }}
+        run: |
+          mvn -B package --file pom.xml --settings .maven/settings.xml \
+            -DskipMunitTests \
+            -Danypoint.clientId="$ANYPOINT_CLIENT_ID" \
+            -Danypoint.clientSecret="$ANYPOINT_CLIENT_SECRET" \
+            -Dmule.env="$ENV" \
+            -Dsecure.key="$KEY"
 
-    - name: Stamp artifact file name with commit hash
-      run: |
-        artifactName1=$(ls target/*.jar | head -1)
-        commitHash=$(git rev-parse --short "$GITHUB_SHA")
-        artifactName2=$(ls target/*.jar | head -1 | sed "s/.jar/-$commitHash.jar/g")
-        mv $artifactName1 $artifactName2
+      - name: Stamp artifact file name with commit hash
+        run: |
+          artifactName1=$(ls target/*.jar | head -1)
+          commitHash=$(git rev-parse --short "$GITHUB_SHA")
+          artifactName2=$(ls target/*.jar | head -1 | sed "s/.jar/-$commitHash.jar/g")
+          mv $artifactName1 $artifactName2
 
-    - name: Upload artifact 
-      uses: actions/upload-artifact@v4
-      with:
-        name: artifacts
-        path: target/*.jar
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts
+          path: target/*.jar
 
   # STEP 4: Shakes hands with runtime fabric managers to deploy cloud application
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    steps:    
-    - name: Checkout this repo
-      uses: actions/checkout@v4
+    steps:
+      - name: Checkout this repo
+        uses: actions/checkout@v4
 
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'zulu'
-        java-version: '17'
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: "zulu"
+          java-version: "17"
 
-    - name: Cache Maven packages
-      uses: actions/cache@v4
-      with:
-        path: ~/.m2/repository
-        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-        restore-keys: ${{ runner.os }}-maven-
+      - name: Cache Maven packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-maven-
 
-    - name: Download built artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: artifacts
+      - name: Download built artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: artifacts
 
-    - name: Package and Deploy to CloudHub 2.0
-      env:  
-        ANYPOINT_CLIENT_ID: ${{ secrets.ANYPOINT_CLIENT_ID }}
-        ANYPOINT_CLIENT_SECRET: ${{ secrets.ANYPOINT_CLIENT_SECRET }}
-        MULE_SECURE_KEY: ${{ secrets.MULE_SECURE_KEY }}
-        MULE_ENV: ${{ vars.MULE_ENV }}
-        ANYPOINT_ORG_ID: ${{ vars.ANYPOINT_ORG_ID }}
-        ANYPOINT_ENV: ${{ vars.ANYPOINT_ENV }}
-        ANYPOINT_TARGET_SPACE: ${{ vars.ANYPOINT_TARGET_SPACE }}
-        ANYPOINT_RUNTIME: ${{ vars.ANYPOINT_RUNTIME }}
-        ANYPOINT_REGION: ${{ vars.ANYPOINT_REGION }}
-        ANYPOINT_APP_NAME: ${{ vars.ANYPOINT_APP_NAME }}
-      run: |
-        SANITISED_APP_NAME=$(echo "$ANYPOINT_APP_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]//g')
-        artifactName=$(ls *.jar | head -1)
-        mvn deploy -DmuleDeploy --settings .maven/settings.xml \
-            -DskipTests \
-            -Dmaven.main.skip=true \
-            -Dmule.artifact="$artifactName" \
-            -Danypoint.clientId="$ANYPOINT_CLIENT_ID" \
-            -Danypoint.clientSecret="$ANYPOINT_CLIENT_SECRET" \
-            -Danypoint.orgId="$ANYPOINT_ORG_ID" \
-            -Dsecure.key="$MULE_SECURE_KEY" \
-            -Danypoint.env="$ANYPOINT_ENV" \
-            -Danypoint.targetSpace="$ANYPOINT_TARGET_SPACE" \
-            -Danypoint.runtime="$ANYPOINT_RUNTIME" \
-            -Danypoint.region="$ANYPOINT_REGION" \
-            -Danypoint.appName="$SANITISED_APP_NAME" \
-            -Dmule.env="$MULE_ENV"
+      - name: Package and Deploy to CloudHub 2.0
+        env:
+          ANYPOINT_CLIENT_ID: ${{ secrets.ANYPOINT_CLIENT_ID }}
+          ANYPOINT_CLIENT_SECRET: ${{ secrets.ANYPOINT_CLIENT_SECRET }}
+          MULE_SECURE_KEY: ${{ secrets.MULE_SECURE_KEY }}
+          MULE_ENV: ${{ vars.MULE_ENV }}
+          ANYPOINT_ORG_ID: ${{ vars.ANYPOINT_ORG_ID }}
+          ANYPOINT_ENV: ${{ vars.ANYPOINT_ENV }}
+          ANYPOINT_TARGET_SPACE: ${{ vars.ANYPOINT_TARGET_SPACE }}
+          ANYPOINT_RUNTIME: ${{ vars.ANYPOINT_RUNTIME }}
+          ANYPOINT_REGION: ${{ vars.ANYPOINT_REGION }}
+          ANYPOINT_APP_NAME: ${{ vars.ANYPOINT_APP_NAME }}
+        run: |
+        
+           CLEAN_APP_NAME=$(echo "$ANYPOINT_APP_NAME" | tr -d '\r\n' | xargs)
+           
+
+           JAR_FILE=$(ls target/*.jar | head -1)
+           echo "Found target artifact file to publish: $JAR_FILE"
+
+          
+           mvn deploy:deploy-file --settings .maven/settings.xml \
+               -DrepositoryId=anypoint-exchange-v3 \
+               -Durl="https://maven.anypoint.mulesoft.com/api/v3/organizations/$ANYPOINT_ORG_ID/maven" \
+               -Dfile="$JAR_FILE" \
+               -DpomFile=pom.xml
+
+           
+           mvn mule:deploy --settings .maven/settings.xml \
+               -DmuleDeploy \
+               -DskipTests \
+               -Danypoint.clientId="$ANYPOINT_CLIENT_ID" \
+               -Danypoint.clientSecret="$ANYPOINT_CLIENT_SECRET" \
+               -Danypoint.orgId="$ANYPOINT_ORG_ID" \
+               -Dsecure.key="$MULE_SECURE_KEY" \
+               -Danypoint.env="$ANYPOINT_ENV" \
+               -Danypoint.targetSpace="$ANYPOINT_TARGET_SPACE" \
+               -Danypoint.runtime="$ANYPOINT_RUNTIME" \
+               -Danypoint.region="$ANYPOINT_REGION" \
+               -Danypoint.appName="$CLEAN_APP_NAME" \
+               -Dmule.env="$ANYPOINT_ENV"
