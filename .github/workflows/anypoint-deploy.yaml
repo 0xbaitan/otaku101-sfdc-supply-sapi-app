@@ -226,6 +226,9 @@ jobs:
           MULE_SECURE_KEY: ${{ secrets.MULE_SECURE_KEY }}
 
         run: |
+
+          CLEAN_APP_NAME=$(echo "$ANYPOINT_APP_NAME" | tr -d '\r\n' | xargs)
+
           mvn mule:deploy --file pom.xml --settings .maven/settings.xml \
             -DskipTests \
             -Dmaven.main.skip=true \
@@ -237,4 +240,4 @@ jobs:
             -Danypoint.targetSpace="$ANYPOINT_TARGET_SPACE" \
             -Danypoint.runtime="$ANYPOINT_RUNTIME" \
             -Danypoint.orgId="$ANYPOINT_ORG_ID" \
-            -Danypoint.appName="$ANYPOINT_APP_NAME"
+            -Danypoint.appName="$CLEAN_APP_NAME"
