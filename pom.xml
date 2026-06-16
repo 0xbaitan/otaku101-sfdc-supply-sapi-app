@@ -6,7 +6,7 @@
 
 	<groupId>365d8e9a-5b53-4d65-8776-8d29047c4ac6</groupId>
 	<artifactId>otaku101-sfdc-supply-sapi-app</artifactId>
-	<version>1.0.0</version>
+	<version>1.0.0-SNAPSHOT</version>
 	<packaging>mule-application</packaging>
 
 	<name>otaku101-sfdc-supply-sapi-app</name>
