@@ -209,4 +209,12 @@
 		</pluginRepository>
 	</pluginRepositories>
 
+
+	<distributionManagement>
+		<repository>
+			<id>anypoint-exchange</id>
+			<name>Anypoint Exchange</name>
+			<url>https://maven.anypoint.mulesoft.com/api/v3/organizations/${anypoint.orgId}/maven</url>
+		</repository>
+	</distributionManagement>
 </project>

@@ -144,7 +144,7 @@ jobs:
           name: artifacts
           path: target/*.jar
 
-  # STEP 4: Shakes hands with runtime fabric managers to deploy cloud application
+
   deploy:
     needs: build
     runs-on: ubuntu-latest
@@ -170,7 +170,7 @@ jobs:
         with:
           name: artifacts
 
-      - name: Package and Deploy to CloudHub 2.0
+      - name: Package and Deploy to Anypoint Exchange and CloudHub 2.0
         env:
           ANYPOINT_CLIENT_ID: ${{ secrets.ANYPOINT_CLIENT_ID }}
           ANYPOINT_CLIENT_SECRET: ${{ secrets.ANYPOINT_CLIENT_SECRET }}
@@ -186,17 +186,16 @@ jobs:
 
           CLEAN_APP_NAME=$(echo "$ANYPOINT_APP_NAME" | tr -d '\r\n' | xargs)
 
-          mvn mule:deploy \
-            --settings .maven/settings.xml \
-            -DmuleDeploy \
-            -DskipTests \
+          echo "Deploying $CLEAN_APP_NAME to Anypoint Exchange and CloudHub 2.0"
+          mvn deploy --file pom.xml --settings .maven/settings.xml \
             -Danypoint.clientId="$ANYPOINT_CLIENT_ID" \
             -Danypoint.clientSecret="$ANYPOINT_CLIENT_SECRET" \
-            -Danypoint.orgId="$ANYPOINT_ORG_ID" \
+            -Dmule.env="$MULE_ENV" \
             -Dsecure.key="$MULE_SECURE_KEY" \
+            -Danypoint.orgId="$ANYPOINT_ORG_ID" \
             -Danypoint.env="$ANYPOINT_ENV" \
             -Danypoint.targetSpace="$ANYPOINT_TARGET_SPACE" \
             -Danypoint.runtime="$ANYPOINT_RUNTIME" \
             -Danypoint.region="$ANYPOINT_REGION" \
-            -Danypoint.appName="$CLEAN_APP_NAME" \
-            -Dmule.env="$ANYPOINT_ENV"
+            -Danypoint.appName="$CLEAN_APP_NAME"
+            
