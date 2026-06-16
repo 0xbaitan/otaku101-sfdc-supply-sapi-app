@@ -28,7 +28,7 @@
 			<munit-tools:assert-that doc:name="ASSERT: success = true" doc:id="d78d3f4f-1f1e-45ec-8e5a-3617fe332c61" expression="#[vars.result.success]" is="#[MunitTools::equalTo(true)]" />
 		</munit:validation>
 	</munit:test>
-	<munit:test name="test:validators\phone-numbers__shouldThrowForInvalidPhoneNumber" doc:id="4dbca56c-879a-4a32-8871-77099d2db06b" description="Test" expectedErrorType="APP:INVALID_PHONE_NUMBER">
+	<munit:test name="test:validators\phone-numbers__shouldThrowForInvalidPhoneNumber" doc:id="4dbca56c-879a-4a32-8871-77099d2db06b" description="Test" expectedErrorType="VALIDATION_FAILURE:INVALID_PHONE_NUMBER">
 		<munit:execution >
 			<set-variable value='#[%dw 2.0&#10;output application/json&#10;import data::validators::PhoneNumbers&#10;---&#10;PhoneNumbers::invalidPhoneNumber]' doc:name="SET: validators\phone-numbers:input" doc:id="2f1fbdf3-b8ce-4d0b-a6c7-7c3eb456efe8" variableName="validators\phone-numbers:input" />
 			<flow-ref doc:name="Flow-ref to validators\phone-numbers" doc:id="e94e1c76-4892-4598-92c1-6449d4c8f288" name="validators\phone-numbers" target="result" />
@@ -37,7 +37,7 @@
 			<logger level="INFO" doc:name="INFO: result" doc:id="90cdd8d4-54ed-4de7-b1cb-0f06f7e11a91" message='#[write(vars.result, "application/json")]' />
 		</munit:validation>
 	</munit:test>
-	<munit:test name="test:validators\phone-numbers__shouldThrowForInvalidPhoneNumbers" doc:id="f2512885-bbaf-436a-8da1-d8a70959d135" description="Test" expectedErrorType="APP:INVALID_PHONE_NUMBER">
+	<munit:test name="test:validators\phone-numbers__shouldThrowForInvalidPhoneNumbers" doc:id="f2512885-bbaf-436a-8da1-d8a70959d135" description="Test" expectedErrorType="VALIDATION_FAILURE:INVALID_PHONE_NUMBER">
 		<munit:execution >
 			<set-variable value='#[%dw 2.0&#10;output application/json&#10;import data::validators::PhoneNumbers&#10;---&#10;PhoneNumbers::invalidPhoneNumbers]' doc:name="SET: validators\phone-numbers:input" doc:id="fce61250-844f-4e83-8a94-843af54148b0" variableName="validators\phone-numbers:input" />
 			<flow-ref doc:name="Flow-ref to validators\phone-numbers" doc:id="9599c0ce-fad6-477b-aab8-8316217f17e5" name="validators\phone-numbers" target="result" />
