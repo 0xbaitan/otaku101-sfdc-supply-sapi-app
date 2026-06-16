@@ -169,5 +169,8 @@ jobs:
           ANYPOINT_CLIENT_SECRET: ${{ secrets.ANYPOINT_CLIENT_SECRET }}
         run: |
           mvn deploy --file pom.xml --settings .maven/settings.xml \
+            -DskipTests \
+            -DskipMuleDeployment=true \
+            -Dmaven.main.skip=true \
             -Danypoint.clientId="$ANYPOINT_CLIENT_ID" \
             -Danypoint.clientSecret="$ANYPOINT_CLIENT_SECRET" \
