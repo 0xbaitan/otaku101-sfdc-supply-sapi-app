@@ -144,7 +144,6 @@ jobs:
           name: artifacts
           path: target/*.jar
 
-
   deploy:
     needs: build
     runs-on: ubuntu-latest
@@ -188,6 +187,7 @@ jobs:
 
           echo "Deploying $CLEAN_APP_NAME to Anypoint Exchange and CloudHub 2.0"
           mvn deploy --file pom.xml --settings .maven/settings.xml \
+            -DskipTests \
             -Danypoint.clientId="$ANYPOINT_CLIENT_ID" \
             -Danypoint.clientSecret="$ANYPOINT_CLIENT_SECRET" \
             -Dmule.env="$MULE_ENV" \
@@ -198,4 +198,3 @@ jobs:
             -Danypoint.runtime="$ANYPOINT_RUNTIME" \
             -Danypoint.region="$ANYPOINT_REGION" \
             -Danypoint.appName="$CLEAN_APP_NAME"
-            

@@ -4,7 +4,7 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<groupId>com.mycompany</groupId>
+	<groupId>365d8e9a-5b53-4d65-8776-8d29047c4ac6</groupId>
 	<artifactId>otaku101-sfdc-supply-sapi-app</artifactId>
 	<version>1.0.0</version>
 	<packaging>mule-application</packaging>
@@ -49,7 +49,7 @@
 						<connectedAppClientSecret>${anypoint.clientSecret}</connectedAppClientSecret>
 						<connectedAppGrantType>client_credentials</connectedAppGrantType>
 
-						<businessGroupId>${anypoint.orgId}</businessGroupId>
+						<businessGroupId>365d8e9a-5b53-4d65-8776-8d29047c4ac6</businessGroupId>
 						<environment>${anypoint.env}</environment>
 						<target>${anypoint.targetSpace}</target>
 						<muleVersion>${anypoint.runtime}</muleVersion>
@@ -214,7 +214,7 @@
 		<repository>
 			<id>anypoint-exchange</id>
 			<name>Anypoint Exchange</name>
-			<url>https://maven.anypoint.mulesoft.com/api/v3/organizations/${anypoint.orgId}/maven</url>
+			<url>https://maven.anypoint.mulesoft.com/api/v3/organizations/365d8e9a-5b53-4d65-8776-8d29047c4ac6/maven</url>
 		</repository>
 	</distributionManagement>
 </project>
