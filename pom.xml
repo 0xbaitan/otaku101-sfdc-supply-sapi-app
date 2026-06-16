@@ -55,7 +55,9 @@
 						<muleVersion>${anypoint.runtime}</muleVersion>
 
 						<applicationName>${anypoint.appName}</applicationName>
-
+						<properties>
+							<mule.env>${mule.env}</mule.env>
+						</properties>
 						<secureProperties>
 							<secure.key>${secure.key}</secure.key>
 						</secureProperties>
