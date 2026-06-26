@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SupplierPaginationMetadata",
+  "type": "object",
+  "properties": {
+    "q": {
+      "type": "string",
+      "description": "Optional search text or query string."
+    },
+    "filters": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["ACTIVE", "INACTIVE", "ONBOARDING"],
+          "description": "Optional status filter restriction."
+        }
+      },
+      "additionalProperties": false
+    },
+    "limit": {
+      "type": "integer",
+      "minimum": 10,
+      "maximum": 100,
+      "default": 25,
+      "description": "Optional maximum number of records to return."
+    },
+    "lastId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Optional cursor pointer representing the UUID of the last evaluated record."
+    }
+  },
+  "additionalProperties": false
+}

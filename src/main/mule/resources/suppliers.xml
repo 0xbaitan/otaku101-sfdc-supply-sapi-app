@@ -1,69 +1,135 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
-	xmlns="http://www.mulesoft.org/schema/mule/core"
-	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+<mule xmlns:java="http://www.mulesoft.org/schema/mule/java" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking"
+	xmlns:validation="http://www.mulesoft.org/schema/mule/validation"
+	xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
-http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd">
-	<flow name="suppliers__create-one" doc:id="e3a94ccb-1a67-417c-a25f-144e376e2dbc">
-		<ee:transform doc:name="SET: Input Variables for Validation Flows" doc:id="1bc1c369-221f-447f-bc6e-bf0153b058c7">
-			<ee:message>
-			</ee:message>
-			<ee:variables>
-				<ee:set-variable variableName="validators\phone-numbers:input"><![CDATA[%dw 2.0
-output application/java
----
-payload.phone default null]]></ee:set-variable>
-				<ee:set-variable variableName="validators\emails:input"><![CDATA[%dw 2.0
-output application/java
----
-payload.email default null]]></ee:set-variable>
-			</ee:variables>
-		</ee:transform>
-		<flow-ref doc:name="FLOW: Validate Phone Number" doc:id="e00aac0b-d1dd-48d3-8540-ee885f6c7861" name="validators\phone-numbers" target="validators\phone-numbers:output" />
-		<flow-ref doc:name="FLOW: Validate Email" doc:id="d8a9a85a-44de-41c9-aa41-47a1674c7031" name="validators\emails" target="validators\emails:output" />
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/java http://www.mulesoft.org/schema/mule/java/current/mule-java.xsd">
+	<sub-flow name="validate-supplier" doc:id="189e7ffe-6946-4774-868a-8617db83898c" >
+		<choice doc:name="payload.email" doc:id="efcfba19-2dbb-4418-8ac3-7cabe8d9d3ac" >
+			<when expression="#[payload.email?]">
+				<validation:is-email doc:name="VALIDATE: Email" doc:id="e3eda961-9791-4739-b66d-d2f3c3a81e8f" email="#[payload.email]" message="#[&quot;Email provided is not in the correct format. Email provided: '$(payload.email)'&quot;]">
+					<error-mapping sourceType="VALIDATION:INVALID_EMAIL" targetType="VALIDATION_FAILURE:INVALID_EMAIL" />
+				</validation:is-email>
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="INFO: No Email" doc:id="9478ef2e-dd42-4e16-82b3-80756a628ce0" message='#[import toString from dw::util::Coercions&#10;---&#10;"[$(toString(now()))] No email has been found in this payload."]'/>
+			</otherwise>
+		</choice>
+		<choice doc:name="payload.phone" doc:id="1cd8ad87-5441-4746-b190-a8185f6717b1" >
+			<when expression="#[payload.phone?]">
+				<validation:is-true doc:name="VALIDATE: Phone Number" doc:id="956037bf-f0df-4686-80f2-c003e68565c1" expression="#[import isE164 from dataweave::util::Phone --- isE164(payload.phone)]" message="#[&quot;Phone number provided is not in the correct format. Phone number provided: '$(payload.phone)'&quot;]">
+					<error-mapping sourceType="VALIDATION:INVALID_BOOLEAN" targetType="VALIDATION_FAILURE:INVALID_PHONE_NUMBER" />
+				</validation:is-true>
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="INFO: No Phone  Number" doc:id="7f72094f-14b3-4066-a14a-28e2f21a6fb7" message='#[%dw 2.0&#10;import toString from dw::util::Coercions&#10;---&#10;"[$(toString(now()))] No phone has been found in this payload."]' />
+			</otherwise>
+		</choice>
+		<choice doc:name="payload.website" doc:id="60db6c17-6cc6-4569-8919-2261fa0ab282">
+			<when expression="#[payload.website?]">
+				<validation:is-url doc:name="VALIDATE: Website" doc:id="a6c8ca58-924f-41fd-9d5d-33a7e6bf4392" url="#[payload.website]" message="#[&quot;Website provided is not in the correct format. Website provided: '$(payload.website)'&quot;]">
+					<error-mapping sourceType="VALIDATION:INVALID_URL" targetType="VALIDATION_FAILURE:INVALID_WEBSITE_URL" />
+				</validation:is-url>
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="INFO: No Website" doc:id="c77b6cba-791b-48cf-8a83-e223664d79fd" message='#[%dw 2.0&#10;import toString from dw::util::Coercions&#10;---&#10;"[$(toString(now()))] No website URL has been found in this payload."]' />
+			</otherwise>
+		</choice>
+		<choice doc:name="payload.name" doc:id="ea65ce98-e064-4e85-a1cc-2e40e1708325" >
+			<when expression="#[payload.name?]" >
+				<validation:is-not-blank-string doc:name="VALIDATE: Supplier Name" doc:id="4bd00222-0ba9-434a-89d7-773829b23f64" value="#[payload.name]" message='#["Supplier name provided cannot be blank."]'>
+					<error-mapping sourceType="VALIDATION:BLANK_STRING" targetType="VALIDATION_FAILURE:BLANK_NAME" />
+				</validation:is-not-blank-string>
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="INFO: No Name" doc:id="4486b17c-539e-4dff-9e81-1898f96ebdd6" message='#[import toString from dw::util::Coercions&#10;---&#10;"[$(toString(now()))] No name has been found in this payload."]' />
+			</otherwise>
+		</choice>
+	</sub-flow>
+	<flow name="create-supplier" doc:id="e3a94ccb-1a67-417c-a25f-144e376e2dbc">
+		<try doc:name="Try" doc:id="89d37fa7-f6dc-4b49-a4ca-edf75187dc7a" >
+			<flow-ref doc:name="INVOKE: Validate Supplier Details" doc:id="8d7e002e-ce14-4a02-b133-449dc0adfbbc" name="validate-supplier"/>
+			<error-handler ref="error-handlers__handle-validation-failures" />
+		</try>
 		<try doc:name="Try" doc:id="d2cc7c69-a136-4a86-b7d8-027591bf9856" >
-			<salesforce:create doc:name="CREATE: Supplier" doc:id="8f790905-7724-4a25-a5b7-3e8acfb2d1e4" config-ref="SalesforceConfig" type="Account">
+			<set-variable value="#[%dw 2.0&#10;import uuid7 from dataweave::util::Id&#10;---&#10;uuid7()]" doc:name="SET: id" doc:id="0bf71de5-7cb2-4a14-9617-3d1644904277" variableName="id"/>
+			<salesforce:create doc:name="CREATE: Supplier" doc:id="8f790905-7724-4a25-a5b7-3e8acfb2d1e4" config-ref="SalesforceConfig" type="Supplier__c">
 			<salesforce:records><![CDATA[#[%dw 2.0
 ---
 [{
+	UUID__c: vars.id,
 	Name: payload.name,
 	(Email__c: payload.email) if (payload.email != null),
-	(Phone: payload.phone) if (payload.phone != null),
-	(Website: payload.website) if (payload.website != null),
+	(Phone__c: payload.phone) if (payload.phone != null),
+	(Website__c: payload.website) if (payload.website != null),
 	(Status__c: payload.status) if (payload.status != null)
 }]]]]></salesforce:records>
 		</salesforce:create>
+			<logger level="INFO" doc:name="INFO: Supplier Created" doc:id="987ca964-593d-4325-964a-ee1a35ac3407" message="#[%dw 2.0&#10;import toString from dw::util::Coercions&#10;---&#10;&quot;[$(toString(now()))] Supplier Account has been created: $(write(payload, 'application/json'))&quot;]"/>
 			<error-handler ref="error-handlers__handle-salesforce-failures" />
 		</try>
-		<ee:transform doc:name="SET: Success Payload &amp; 200 HTTP Status" doc:id="ebf06cb7-aea9-40b5-95b6-11eb91ac48ab">
+		<ee:transform doc:name="SET: Success Payload &amp; 201 HTTP Status" doc:id="ebf06cb7-aea9-40b5-95b6-11eb91ac48ab">
 			<ee:message>
 				<ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
-	id: payload.items.id[0]
+	id: vars.id
 }]]></ee:set-payload>
 			</ee:message>
 			<ee:variables >
 				<ee:set-variable variableName="httpStatus" ><![CDATA[%dw 2.0
 output application/java
 ---
-200]]></ee:set-variable>
+201]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
 		<error-handler ref="error-handlers__handle-validation-failures" />
 	</flow>
-	<flow name="suppliers__find-one-by-id" doc:id="0ddee6c0-61da-4ce5-91ff-6bca75797e51" >
+	<flow name="update-supplier" doc:id="a89bfd31-64cb-4929-8712-67229d2d6be2">
+		<try doc:name="Try" doc:id="5e91a6e5-3f61-45b3-9320-87d3197dd125">
+			<flow-ref doc:name="INVOKE: Validate Supplier Details" doc:id="7bdbea8b-c7fe-41c3-b6e2-5483cf89d30c" name="validate-supplier" />
+			<error-handler ref="error-handlers__handle-validation-failures" />
+		</try>
+		<try doc:name="Try" doc:id="03938493-5da4-48fc-b0da-b905dbcb7c1e" >
+			<salesforce:upsert doc:name="UPDATE: Supplier" doc:id="1f184dd2-aac9-428c-b0b8-ac7a9e41460b" config-ref="SalesforceConfig" objectType="Supplier__c" externalIdFieldName="UUID__c">
+				<salesforce:records ><![CDATA[#[[{
+	UUID__c: vars.id,
+	(Name: payload.name) if (payload.name?),
+	(Email__c: payload.email) if (payload.email != null),
+	(Phone__c: payload.phone) if (payload.phone != null),
+	(Website__c: payload.website) if (payload.website != null),
+	(Status__c: payload.status) if (payload.status != null)
+}]]]]></salesforce:records>
+			</salesforce:upsert>
+			<logger level="INFO" doc:name="INFO: " doc:id="f905f098-7522-439b-9f44-48b72f437863" message="#[&quot;Raw results: $(write(payload, 'application/json'))&quot;]" />
+			<error-handler ref="error-handlers__handle-salesforce-failures" />
+		</try>
+		<ee:transform doc:name="Transform Message" doc:id="ac1811f3-7e21-4d9b-a2d1-09462bf956c0" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<error-handler ref="error-handlers__handle-validation-failures" />
+	</flow>
+	<flow name="find-supplier-by-id" doc:id="0ddee6c0-61da-4ce5-91ff-6bca75797e51" >
 		<try doc:name="Try" doc:id="0002ef9a-560d-4f19-8026-927956fdc558" >
-			<salesforce:query doc:name="QUERY: Supplier by Id " doc:id="2c5bb4f1-7e23-4e8c-b6b4-716cfce5e82a" config-ref="SalesforceConfig">
-				<salesforce:salesforce-query ><![CDATA[SELECT Id, Name, Email__c, Phone, Website, Status__c FROM Account WHERE Id = ':id']]></salesforce:salesforce-query>
+			<salesforce:query doc:name="QUERY: Supplier by Id" doc:id="2c5bb4f1-7e23-4e8c-b6b4-716cfce5e82a" config-ref="SalesforceConfig">
+				<salesforce:salesforce-query ><![CDATA[SELECT UUID__c, Name, Email__c, Phone__c, Website__c, Status__c, CreatedDate, LastModifiedDate FROM Supplier__c WHERE UUID__c = ':id']]></salesforce:salesforce-query>
 				<salesforce:parameters ><![CDATA[#[output application/java
 ---
 {
 	id : vars.id
 }]]]></salesforce:parameters>
 			</salesforce:query>
+			<logger level="INFO" doc:name="INFO: Raw Query Result" doc:id="5420fb6e-f3c1-4e29-b716-af9beee8b3b9" message="#[%dw 2.0&#10;import toString from dw::util::Coercions&#10;---&#10;&quot;Raw Query Result: $(write(payload, 'application/json'))&quot;]" />
 			<error-handler ref="error-handlers__handle-salesforce-failures" />
 		</try>
 		<ee:transform doc:name="SET: Success Payload &amp; 200 HTTP Status" doc:id="5d36bf14-a7f7-4378-bde7-01ca731d3636" >
@@ -74,12 +140,14 @@ output application/json
 var item = payload[0]
 ---
 {
-	id: item.Id,
+	id: item.UUID__c,
 	name: item.Name,
 	email: item.Email__c,
-	phone: item.Phone,
-	website: item.Website,
-	status: item.Status__c
+	phone: item.Phone__c,
+	website: item.Website__c,
+	status: item.Status__c,
+	createdAt: item.CreatedDate,
+	updatedAt: item.LastModifiedDate
 }]]></ee:set-payload>
 			</ee:message>
 			<ee:variables >
@@ -90,28 +158,75 @@ output application/java
 			</ee:variables>
 		</ee:transform>
 	</flow>
-	<flow name="suppliers__query" doc:id="6561a53b-d0b2-4531-b1f4-9cb1e5fe0877" >
+	<flow name="query-suppliers" doc:id="6561a53b-d0b2-4531-b1f4-9cb1e5fe0877" >
+		<flow-ref doc:name="INVOKE: Compute Parameters" doc:id="bdfb9fc0-bdbb-4970-b54b-c6786e95d75c" name="decode-cursor-token" target="parameters"/>
 		<try doc:name="Try" doc:id="2c554b59-e30b-4bd4-abbe-f33342cb1496" >
+			<set-variable value="#[%dw 2.0&#10;output application/json&#10;&#10;var isForwards = vars.parameters.targetDirection == &quot;forwards&quot;&#10;var hasTarget = vars.parameters.targetId != null&#10;&#10;// Flattening conditional arrays avoids mixing Null and String types&#10;var whereClauses: Array&lt;String&gt; = flatten([&#10;    if (vars.parameters.filters.status?) [&quot;Status__c = ':status'&quot;] else [],&#10;    if (vars.parameters.q != null) [&quot;Name LIKE ':q'&quot;] else [],&#10;    if (hasTarget and isForwards) [&quot;UUID__c &gt; ':targetId'&quot;] else [],&#10;    if (hasTarget and !isForwards) [&quot;UUID__c &lt; ':targetId'&quot;] else []&#10;])&#10;&#10;var whereString: String = if (isEmpty(whereClauses)) &quot;&quot; else &quot;WHERE &quot; ++ (whereClauses joinBy &quot; AND &quot;)&#10;&#10;var orderString: String = if (isForwards) &quot;ORDER BY UUID__c ASC&quot; else &quot;ORDER BY UUID__c DESC&quot;&#10;&#10;// Wrap conditional strings in arrays so flatten handles them cleanly&#10;var queryParts: Array&lt;String&gt; = flatten([&#10;    [&quot;SELECT UUID__c, Name, Email__c, Phone__c, Website__c, Status__c, CreatedDate, LastModifiedDate FROM Supplier__c&quot;],&#10;    if (whereString != &quot;&quot;) [whereString] else [],&#10;    [orderString],&#10;    [&quot;LIMIT :limit&quot;]&#10;])&#10;---&#10;queryParts joinBy &quot; &quot;]" doc:name="SET: soql" doc:id="4d87a3bd-10fc-4ff5-a1a2-6d5dff6f2d94" variableName="soql" />
+			<logger level="INFO" doc:name="INFO: soql" doc:id="d68eaeb9-97a4-4d35-8167-4183c7993f7a" message='#["SOQL: $(vars.soql)"]'/>
 			<salesforce:query-all doc:name="QUERY: Matching Suppliers " doc:id="11c7a96a-508e-43c9-b22a-3e8f8b2d01b2" config-ref="SalesforceConfig">
-				<salesforce:salesforce-query ><![CDATA[SELECT Id, Name, Email__c, Phone, Website, Status__c FROM Account ORDER BY Id ASC]]></salesforce:salesforce-query>
+				<salesforce:salesforce-query ><![CDATA[#[vars.soql]]]></salesforce:salesforce-query>
+				<salesforce:parameters ><![CDATA[#[%dw 2.0
+output application/json
+---
+{
+    limit: vars.parameters.limit default 25,
+    
+    // Conditionally include keys only if the data exists
+    (status: vars.parameters.filters.status) if (vars.parameters.filters.status?),
+    (q: "%" ++ vars.parameters.q as String ++ "%") if (vars.parameters.q != null),
+    (targetId: vars.parameters.targetId) if (vars.parameters.targetId != null)
+}]]]></salesforce:parameters>
 			</salesforce:query-all>
-			<logger level="INFO" doc:name="Logger" doc:id="62cf4d29-0501-41ca-8c29-5b2081adc9b5" />
+			<ee:transform doc:name="Transform Message" doc:id="23206420-4bbd-4ea7-aee9-6d016c682751" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+import * from dataweave::util::Pagination
+import * from dw::core::Binaries
+var rawDbResults = payload default []
+var requestedLimit = (vars.parameters.limit default 25) as Number
+var incomingDirection = vars.parameters.targetDirection default "forward"
+var hasIncomingToken = (vars.parameters.before != null) or (vars.parameters.after != null)
+var currentFilters = vars.parameters.filters default {
+}
+var hasExtraRecord = sizeOf(rawDbResults) > requestedLimit
+var slicedResults = if ( hasExtraRecord ) rawDbResults[0 to (requestedLimit - 1)] else rawDbResults
+var finalResults = if ( incomingDirection == "backward" ) slicedResults[-1 to 0] else slicedResults
+var firstRecord = finalResults[0] default null
+var lastRecord = finalResults[-1] default null
+var wasMovingBackward = incomingDirection == "backward"
+var wasMovingForward = incomingDirection == "forward"
+var hasNext = if ( wasMovingForward ) hasExtraRecord else true
+var hasPrevious = if ( wasMovingBackward ) hasExtraRecord else (wasMovingForward and hasIncomingToken)
+---
+{
+	paging: {
+		cursors: {
+			before: if ( hasPrevious ) serializeToken(firstRecord, "backward", requestedLimit, currentFilters) else null,
+			after: if ( hasNext ) serializeToken(lastRecord, "forward", requestedLimit, currentFilters) else null
+		},
+		hasNext: hasNext,
+		hasPrevious: hasPrevious,
+		limit: requestedLimit
+	},
+	results: finalResults map {
+		id: $.UUID__c,
+		name: $.Name,
+		email: $.Email__c,
+		phone: $.Phone__c default null,
+		website: $.Website__c default null,
+		status: $.Status__c
+	}
+}]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+			<logger level="INFO" doc:name="INFO: Raw Query Result" doc:id="62cf4d29-0501-41ca-8c29-5b2081adc9b5" message="#[%dw 2.0&#10;import toString from dw::util::Coercions&#10;---&#10;&quot;Raw Query Result: $(write(payload, 'application/json'))&quot;]"/>
 			<error-handler ref="error-handlers__handle-salesforce-failures" />
 		</try>
 		<ee:transform doc:name="SET: Success Payload &amp; 200 HTTP Status" doc:id="9f244421-b093-47a0-bff2-5a497a62dc8d" >
 			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
-output application/json
-
----
-payload map {
-	id: $.Id,
-	name: $.Name,
-	email: $.Email__c,
-	phone: $.Phone,
-	website: $.Website,
-	status: $.Status__c
-}]]></ee:set-payload>
+				<ee:set-payload ><![CDATA[payload
+]]></ee:set-payload>
 			</ee:message>
 			<ee:variables >
 				<ee:set-variable variableName="httpStatus" ><![CDATA[%dw 2.0

@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Supplier",
+  "description": "Schema definition for procurement and inventory suppliers",
+  "type": "object",
+  "required": [
+    "supplierId",
+    "supplierName",
+    "status"
+  ],
+  "properties": {
+    "supplierId": {
+      "description": "Unique identifier for the supplier",
+      "type": "integer",
+      "minimum": 1
+    },
+    "supplierName": {
+      "description": "The registered legal name of the supplier business",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "status": {
+      "description": "Current operational status of the supplier within the system",
+      "type": "string",
+      "enum": [
+        "Active",
+        "Pending",
+        "Inactive"
+      ]
+    },
+    "email": {
+      "description": "Primary contact email address",
+      "type": "string",
+      "format": "email"
+    }
+  },
+  "additionalProperties": false
+}
