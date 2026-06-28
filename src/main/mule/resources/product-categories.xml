@@ -30,7 +30,7 @@ http://www.mulesoft.org/schema/mule/java http://www.mulesoft.org/schema/mule/jav
         </try>
         <try doc:name="TRY: Create Product Category in Salesforce">
             <set-variable variableName="categoryId" value="#[import uuid7 from dataweave::util::Id --- uuid7()]" />
-            <salesforce:create config-ref="SalesforceConfig" doc:name="CREATE: Product Category in Salesforce" objectType="ProductCategory__c">
+            <salesforce:create config-ref="SalesforceConfig" doc:name="CREATE: Product Category in Salesforce" type="ProductCategory__c">
                 <salesforce:records>#[[{
                     UUID__c: vars.categoryId,
                     Name: payload.name,
@@ -157,7 +157,7 @@ attributes.queryParams.before]]></ee:set-variable>
             <ee:transform doc:name="BUILD: SOQL Query">
                 <ee:variables>
                     <ee:set-variable variableName="soql"><![CDATA[%dw 2.0
-import dw::util::Pagination
+import dataweave::util::Pagination
 output application/java
 ---
 Pagination::buildSoql(
@@ -175,7 +175,7 @@ Pagination::buildSoql(
             <ee:transform doc:name="MAP: Paginated Categories">
                 <ee:message>
                     <ee:set-payload><![CDATA[%dw 2.0
-import dw::util::Pagination
+import dataweave::util::Pagination
 output application/json
 
 var result = Pagination::paginate(payload, vars.pageSize, vars.afterCursor, vars.beforeCursor)

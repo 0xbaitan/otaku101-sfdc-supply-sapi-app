@@ -42,7 +42,7 @@ http://www.mulesoft.org/schema/mule/java http://www.mulesoft.org/schema/mule/jav
                     <raise-error doc:name="RAISE: Supplier Not Found" type="VALIDATION_FAILURE:RESOURCE_NOT_FOUND" description="Supplier not found" />
                 </otherwise>
             </choice>
-            <salesforce:create config-ref="SalesforceConfig" doc:name="CREATE: Contact in Salesforce" objectType="Contact">
+            <salesforce:create config-ref="SalesforceConfig" doc:name="CREATE: Contact in Salesforce" type="Contact">
                 <salesforce:records>#[[{
                     UUID__c: vars.contactId,
                     Supplier__c: vars.supplierSfId,
@@ -142,7 +142,7 @@ payload]]></ee:set-payload>
                 <salesforce:salesforce-query>SELECT Id FROM Contact WHERE UUID__c = ':contactUuid' LIMIT 1</salesforce:salesforce-query>
                 <salesforce:parameters>#[{contactUuid: vars.id}]</salesforce:parameters>
             </salesforce:query>
-            <salesforce:delete config-ref="SalesforceConfig" doc:name="DELETE: Contact Records" objectType="Contact">
+            <salesforce:delete config-ref="SalesforceConfig" doc:name="DELETE: Contact Records">
                 <salesforce:ids>#[payload map $.Id]</salesforce:ids>
             </salesforce:delete>
             <logger level="INFO" message="#[%dw 2.0 import toString from dw::util::Coercions --- &quot;[$(toString(now()))] Contact deleted: $(vars.id)&quot;]" />
@@ -176,7 +176,7 @@ attributes.queryParams.before]]></ee:set-variable>
             <ee:transform doc:name="BUILD: Cursor SOQL Query">
                 <ee:variables>
                     <ee:set-variable variableName="soql"><![CDATA[%dw 2.0
-import dw::util::Pagination
+import dataweave::util::Pagination
 output application/java
 
 var safeSupplierId = if (Pagination::isValidUuid(vars.id)) vars.id else ""
@@ -199,7 +199,7 @@ else
             <ee:transform doc:name="MAP: Paginated Contacts">
                 <ee:message>
                     <ee:set-payload><![CDATA[%dw 2.0
-import dw::util::Pagination
+import dataweave::util::Pagination
 output application/json
 
 var result = Pagination::paginate(payload, vars.pageSize, vars.afterCursor, vars.beforeCursor)

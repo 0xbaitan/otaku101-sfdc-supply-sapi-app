@@ -57,7 +57,7 @@ http://www.mulesoft.org/schema/mule/java http://www.mulesoft.org/schema/mule/jav
 		</try>
 		<try doc:name="TRY: Create Supplier in Salesforce" doc:id="d2cc7c69-a136-4a86-b7d8-027591bf9856" >
 			<set-variable value="#[%dw 2.0&#10;import uuid7 from dataweave::util::Id&#10;---&#10;uuid7()]" doc:name="SET: id" doc:id="0bf71de5-7cb2-4a14-9617-3d1644904277" variableName="id"/>
-			<salesforce:create doc:name="CREATE: Supplier" doc:id="8f790905-7724-4a25-a5b7-3e8acfb2d1e4" config-ref="SalesforceConfig" objectType="Supplier__c">
+			<salesforce:create doc:name="CREATE: Supplier" doc:id="8f790905-7724-4a25-a5b7-3e8acfb2d1e4" config-ref="SalesforceConfig" type="Supplier__c">
 			<salesforce:records><![CDATA[#[%dw 2.0
 ---
 [{
@@ -182,7 +182,7 @@ attributes.queryParams.before]]></ee:set-variable>
 			<ee:transform doc:name="SET: Build Cursor Query" doc:id="8f4e1d2c-3b5c-6d7e-9f0a-1b2c3d4e5f6a" >
 				<ee:variables >
 					<ee:set-variable variableName="soql" ><![CDATA[%dw 2.0
-import dw::util::Pagination
+import dataweave::util::Pagination
 output application/java
 ---
 Pagination::buildSoql(
@@ -200,7 +200,7 @@ Pagination::buildSoql(
 			<ee:transform doc:name="SET: Paginated Response" doc:id="9f244421-b093-47a0-bff2-5a497a62dc8d" >
 				<ee:message >
 					<ee:set-payload ><![CDATA[%dw 2.0
-import dw::util::Pagination
+import dataweave::util::Pagination
 output application/json
 
 var result = Pagination::paginate(payload, vars.pageSize, vars.afterCursor, vars.beforeCursor)

@@ -14,7 +14,7 @@ http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mu
 http://www.mulesoft.org/schema/mule/java http://www.mulesoft.org/schema/mule/java/current/mule-java.xsd">
 
     <sub-flow name="validate-facility" doc:name="VALIDATE: Facility">
-        <choice doc:name="CHECK: Name Not Blank">
+        <choice doc:name="CHECK: Named Not Blank">
             <when expression="#[payload.name?]">
                 <validation:is-not-blank-string value="#[payload.name]" message="Facility name cannot be blank.">
                     <error-mapping sourceType="VALIDATION:BLANK_STRING" targetType="VALIDATION_FAILURE:BLANK_NAME" />
@@ -42,7 +42,7 @@ http://www.mulesoft.org/schema/mule/java http://www.mulesoft.org/schema/mule/jav
                     <raise-error doc:name="RAISE: Supplier Not Found" type="VALIDATION_FAILURE:RESOURCE_NOT_FOUND" description="Supplier not found" />
                 </otherwise>
             </choice>
-            <salesforce:create config-ref="SalesforceConfig" doc:name="CREATE: Facility in Salesforce" objectType="Facility__c">
+            <salesforce:create config-ref="SalesforceConfig" doc:name="CREATE: Facility in Salesforce" type="Facility__c">
                 <salesforce:records>#[[{
                     UUID__c: vars.facilityId,
                     Supplier__c: vars.supplierSfId,
@@ -154,7 +154,7 @@ attributes.queryParams.before]]></ee:set-variable>
             <ee:transform doc:name="BUILD: Cursor SOQL Query">
                 <ee:variables>
                     <ee:set-variable variableName="soql"><![CDATA[%dw 2.0
-import dw::util::Pagination
+import dataweave::util::Pagination
 output application/java
 
 var safeSupplierId = if (Pagination::isValidUuid(vars.id)) vars.id else ""
@@ -177,7 +177,7 @@ else
             <ee:transform doc:name="MAP: Paginated Facilities">
                 <ee:message>
                     <ee:set-payload><![CDATA[%dw 2.0
-import dw::util::Pagination
+import dataweave::util::Pagination
 output application/json
 
 var result = Pagination::paginate(payload, vars.pageSize, vars.afterCursor, vars.beforeCursor)
@@ -237,7 +237,7 @@ read(fromBase64(payload.file), "application/xlsx")]]></ee:set-variable>
             </salesforce:query>
             <choice doc:name="CHECK: Has Existing Inventory">
                 <when expression="#[sizeOf(payload) > 0]">
-                    <salesforce:delete config-ref="SalesforceConfig" doc:name="DELETE: Existing Inventory" objectType="Inventory__c">
+                    <salesforce:delete config-ref="SalesforceConfig" doc:name="DELETE: Existing Inventory">
                         <salesforce:ids>#[payload map $.Id]</salesforce:ids>
                     </salesforce:delete>
                 </when>
@@ -253,7 +253,7 @@ read(fromBase64(payload.file), "application/xlsx")]]></ee:set-variable>
                 <choice doc:name="CHECK: Product Exists">
                     <when expression="#[sizeOf(payload) > 0]">
                         <set-variable variableName="inventoryId" value="#[import uuid7 from dataweave::util::Id --- uuid7()]" />
-                        <salesforce:create config-ref="SalesforceConfig" doc:name="CREATE: Inventory Record" objectType="Inventory__c">
+                        <salesforce:create config-ref="SalesforceConfig" doc:name="CREATE: Inventory Record" type="Inventory__c">
                             <salesforce:records>#[[{
                                 UUID__c: vars.inventoryId,
                                 Facility__c: vars.facilitySfId,

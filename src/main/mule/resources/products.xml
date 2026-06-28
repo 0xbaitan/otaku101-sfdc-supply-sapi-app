@@ -55,7 +55,7 @@ http://www.mulesoft.org/schema/mule/java http://www.mulesoft.org/schema/mule/jav
                     <set-variable variableName="categorySfId" value="#[payload[0].Id]" />
                 </when>
             </choice>
-            <salesforce:create config-ref="SalesforceConfig" doc:name="CREATE: Product in Salesforce" objectType="Product__c">
+            <salesforce:create config-ref="SalesforceConfig" doc:name="CREATE: Product in Salesforce" type="Product__c">
                 <salesforce:records>#[[{
                     UUID__c: vars.productId,
                     Supplier__c: vars.supplierSfId,
@@ -183,7 +183,7 @@ attributes.queryParams.before]]></ee:set-variable>
             <ee:transform doc:name="BUILD: Cursor SOQL Query">
                 <ee:variables>
                     <ee:set-variable variableName="soql"><![CDATA[%dw 2.0
-import dw::util::Pagination
+import dataweave::util::Pagination
 output application/java
 
 var safeSupplierId = if (Pagination::isValidUuid(vars.id)) vars.id else ""
@@ -206,7 +206,7 @@ else
             <ee:transform doc:name="MAP: Paginated Products">
                 <ee:message>
                     <ee:set-payload><![CDATA[%dw 2.0
-import dw::util::Pagination
+import dataweave::util::Pagination
 output application/json
 
 var result = Pagination::paginate(payload, vars.pageSize, vars.afterCursor, vars.beforeCursor)
