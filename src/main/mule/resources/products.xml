@@ -97,6 +97,9 @@ output application/json
 
 var item = payload[0]
 ---
+if (sizeOf(payload) == 0)
+    {message: "Resource not found"}
+else
 {
     id: item.UUID__c,
     name: item.Name,
@@ -108,7 +111,10 @@ var item = payload[0]
 }]]></ee:set-payload>
             </ee:message>
             <ee:variables>
-                <ee:set-variable variableName="httpStatus">200</ee:set-variable>
+                <ee:set-variable variableName="httpStatus"><![CDATA[%dw 2.0
+output application/java
+---
+if (sizeOf(payload) == 0) 404 else 200]]></ee:set-variable>
             </ee:variables>
         </ee:transform>
     </flow>
