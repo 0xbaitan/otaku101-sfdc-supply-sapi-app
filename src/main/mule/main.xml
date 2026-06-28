@@ -153,12 +153,12 @@ output application/json
         <flow-ref doc:name="FLOW: Create Supplier" doc:id="7bb1bb38-a754-40c7-9b3e-525c6f568820" name="create-supplier" />
     </flow>
     <flow name="put:\facilities\(id)\inventory:application\json:main-config">
-        <ee:transform doc:name="Transform Message">
+        <ee:transform doc:name="SET: id">
             <ee:variables>
                 <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
             </ee:variables>
         </ee:transform>
-        <logger level="INFO" message="put:\facilities\(id)\inventory:application\json:main-config" />
+        <flow-ref name="replace-inventory" />
     </flow>
     <flow name="delete:\contacts\(id):main-config">
         <ee:transform doc:name="SET: id">
@@ -214,7 +214,6 @@ output application/json
                 <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
             </ee:variables>
         </ee:transform>
-        <logger level="INFO" message="patch:\suppliers\(id):application\json:main-config" />
         <flow-ref doc:name="FLOW: Update Supplier By Id" doc:id="845805fb-48f6-4f79-95c5-35d14890ac04" name="update-supplier" />
     </flow>
     <flow name="get:\suppliers\(id)\contacts:main-config">

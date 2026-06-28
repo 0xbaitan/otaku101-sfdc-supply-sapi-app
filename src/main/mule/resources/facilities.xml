@@ -207,4 +207,79 @@ var result = Pagination::paginate(payload, vars.pageSize, vars.afterCursor, vars
             <error-handler ref="error-handlers__handle-salesforce-failures" />
         </try>
     </flow>
+
+    <flow name="replace-inventory">
+        <try>
+            <ee:transform>
+                <ee:variables>
+                    <ee:set-variable variableName="inventoryRows"><![CDATA[%dw 2.0
+import * from dw::core::Binaries
+output application/java
+---
+read(fromBase64(payload.file), "application/xlsx")]]></ee:set-variable>
+                </ee:variables>
+            </ee:transform>
+            <salesforce:query config-ref="SalesforceConfig">
+                <salesforce:salesforce-query>SELECT Id FROM Facility__c WHERE UUID__c = ':facilityUuid' LIMIT 1</salesforce:salesforce-query>
+                <salesforce:parameters>#[{facilityUuid: vars.id}]</salesforce:parameters>
+            </salesforce:query>
+            <choice>
+                <when expression="#[sizeOf(payload) > 0]">
+                    <set-variable variableName="facilitySfId" value="#[payload[0].Id]" />
+                </when>
+                <otherwise>
+                    <raise-error type="VALIDATION_FAILURE:RESOURCE_NOT_FOUND" description="Facility not found" />
+                </otherwise>
+            </choice>
+            <salesforce:query config-ref="SalesforceConfig">
+                <salesforce:salesforce-query>SELECT Id FROM Inventory__c WHERE Facility__r.UUID__c = ':facilityUuid'</salesforce:salesforce-query>
+                <salesforce:parameters>#[{facilityUuid: vars.id}]</salesforce:parameters>
+            </salesforce:query>
+            <choice>
+                <when expression="#[sizeOf(payload) > 0]">
+                    <salesforce:delete config-ref="SalesforceConfig" type="Inventory__c">
+                        <salesforce:ids>#[payload map $.Id]</salesforce:ids>
+                    </salesforce:delete>
+                </when>
+            </choice>
+            <set-variable variableName="recordsCreated" value="#[0]" />
+            <foreach collection="#[vars.inventoryRows]">
+                <set-variable variableName="xlsxRow" value="#[payload]" />
+                <set-variable variableName="productId" value="#[vars.xlsxRow.'Product ID']" />
+                <salesforce:query config-ref="SalesforceConfig">
+                    <salesforce:salesforce-query>SELECT Id FROM Product__c WHERE UUID__c = ':productUuid' LIMIT 1</salesforce:salesforce-query>
+                    <salesforce:parameters>#[{productUuid: vars.productId}]</salesforce:parameters>
+                </salesforce:query>
+                <choice>
+                    <when expression="#[sizeOf(payload) > 0]">
+                        <set-variable variableName="inventoryId" value="#[import uuid7 from dataweave::util::Id --- uuid7()]" />
+                        <salesforce:create config-ref="SalesforceConfig" type="Inventory__c">
+                            <salesforce:records>#[[{
+                                UUID__c: vars.inventoryId,
+                                Facility__c: vars.facilitySfId,
+                                Product__c: payload[0].Id,
+                                Quantity__c: vars.xlsxRow.Quantity as Number
+                            }]]</salesforce:records>
+                        </salesforce:create>
+                        <set-variable variableName="recordsCreated" value="#[vars.recordsCreated + 1]" />
+                    </when>
+                </choice>
+            </foreach>
+            <error-handler ref="error-handlers__handle-salesforce-failures" />
+        </try>
+        <ee:transform>
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    status: "ok",
+    recordsCreated: vars.recordsCreated
+}]]></ee:set-payload>
+            </ee:message>
+            <ee:variables>
+                <ee:set-variable variableName="httpStatus">200</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+    </flow>
 </mule>
