@@ -4,7 +4,7 @@
 	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
-	<sub-flow name="decode-cursor-token" doc:id="c2416aca-062d-45ff-9c67-adc65c2fc211" >
+	<sub-flow name="decode-cursor-token" doc:name="DECODE: Pagination Cursors" doc:id="c2416aca-062d-45ff-9c67-adc65c2fc211" >
 		<choice doc:name="Validate Cursors" doc:id="cd7ad15d-7d85-40ad-aa11-9a15d44e5b31" >
 			<when expression="#[attributes.queryParams.before? and attributes.queryParams.after?]">
 				<raise-error doc:name="FAIL: Both Pagination Cursors are Present" doc:id="61515d26-9455-41e4-b977-96d63f59e6da" type="VALIDATION_FAILURE:BOTH_CURSORS_PRESENT" description="Cannot have both before and after pagination cursors"/>
@@ -35,7 +35,7 @@ decodeCursor(attributes.queryParams.after as String)]]></ee:set-payload>
 			</when>
 			<otherwise >
 				<logger level="INFO" doc:name="INFO: No Cursor Present" doc:id="41e0abf1-1aca-4072-b04d-f14a2815e511" message="No Cursor Present"/>
-				<ee:transform doc:name="Transform Message" doc:id="4fda52a5-a7a2-4910-9b09-c74548b905fd">
+				<ee:transform doc:name="SET: Null Payload" doc:id="4fda52a5-a7a2-4910-9b09-c74548b905fd">
 					<ee:message>
 						<ee:set-payload><![CDATA[%dw 2.0
 output application/json
@@ -45,7 +45,7 @@ null]]></ee:set-payload>
 				</ee:transform>
 			</otherwise>
 		</choice>
-		<ee:transform doc:name="Transform Message" doc:id="80c19f20-c7e1-4757-9d25-b59df624e6e2" >
+		<ee:transform doc:name="SET: Decoded Cursor Content" doc:id="80c19f20-c7e1-4757-9d25-b59df624e6e2" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
 output application/json

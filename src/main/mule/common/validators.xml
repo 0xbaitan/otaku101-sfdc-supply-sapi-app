@@ -6,7 +6,7 @@
 http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
 http://www.mulesoft.org/schema/mule/tracing http://www.mulesoft.org/schema/mule/tracing/current/mule-tracing.xsd">
-	<sub-flow name="validators\phone-numbers" doc:id="de0b3b1c-5291-4f8b-b0d0-d7157d8f2800" >
+	<sub-flow name="validators\phone-numbers" doc:name="VALIDATE: Phone Number" doc:id="de0b3b1c-5291-4f8b-b0d0-d7157d8f2800" >
 		<set-variable value='#[%dw 2.0&#10;output application/java&#10;---&#10;vars."validators\phone-numbers:input"]' doc:name="SET: phoneNumbers" doc:id="ea7dff1c-f6c6-42bd-9aa9-010d9c0ba7e9" variableName="phoneNumbers"/>
 		<choice doc:name="CHOOSE: Subprocess by phoneNumbers Type" doc:id="09313b9d-28b8-42f9-bd23-fc9bec600fbd">
 			<when expression="#[vars.phoneNumbers is String]">
@@ -40,7 +40,7 @@ output application/json
 			</ee:message>
 		</ee:transform>
 	</sub-flow>
-	<sub-flow name="validators\emails" doc:id="448acee6-2177-4f28-90ff-7ae625320435" >
+	<sub-flow name="validators\emails" doc:name="VALIDATE: Email" doc:id="448acee6-2177-4f28-90ff-7ae625320435" >
 		<set-variable value='#[%dw 2.0&#10;output application/java&#10;---&#10;vars."validators\emails:input"]' doc:name="SET: emails" doc:id="35c3ec31-65a5-498f-a150-54cc842aed3a" variableName="emails"/>
 		<choice doc:name="CHOOSE: Subprocess by emails Type" doc:id="86a6eeea-2bb6-429b-87ad-6049c683f97e" >
 			<when expression="#[vars.emails is String]" >
