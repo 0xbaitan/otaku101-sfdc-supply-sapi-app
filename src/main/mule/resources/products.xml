@@ -34,7 +34,14 @@ http://www.mulesoft.org/schema/mule/java http://www.mulesoft.org/schema/mule/jav
                 <salesforce:salesforce-query>SELECT Id FROM Supplier__c WHERE UUID__c = ':supplierUuid' LIMIT 1</salesforce:salesforce-query>
                 <salesforce:parameters>#[{supplierUuid: vars.id}]</salesforce:parameters>
             </salesforce:query>
-            <set-variable variableName="supplierSfId" value="#[payload[0].Id]" />
+            <choice>
+                <when expression="#[sizeOf(payload) > 0]">
+                    <set-variable variableName="supplierSfId" value="#[payload[0].Id]" />
+                </when>
+                <otherwise>
+                    <raise-error type="VALIDATION_FAILURE:RESOURCE_NOT_FOUND" description="Supplier not found" />
+                </otherwise>
+            </choice>
             <choice>
                 <when expression="#[payload.categoryId?]">
                     <salesforce:query config-ref="SalesforceConfig">
