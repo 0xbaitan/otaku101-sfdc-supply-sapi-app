@@ -163,14 +163,18 @@ attributes.queryParams.before]]></ee:set-variable>
             <ee:transform>
                 <ee:variables>
                     <ee:set-variable variableName="soql"><![CDATA[%dw 2.0
+import dw::util::Pagination
 output application/java
 ---
-var baseQuery = "SELECT UUID__c, Name, Email, Phone, Title FROM Contact WHERE Supplier__r.UUID__c = '" ++ vars.id ++ "'"
+var safeSupplierId = if (Pagination::isValidUuid(vars.id)) vars.id else ""
+var safeBefore = if (vars.beforeCursor != null and Pagination::isValidUuid(vars.beforeCursor)) vars.beforeCursor else null
+var safeAfter = if (vars.afterCursor != null and Pagination::isValidUuid(vars.afterCursor)) vars.afterCursor else null
+var baseQuery = "SELECT UUID__c, Name, Email, Phone, Title FROM Contact WHERE Supplier__r.UUID__c = '" ++ safeSupplierId ++ "'"
 ---
-if (vars.beforeCursor != null)
-    baseQuery ++ " AND UUID__c < '" ++ vars.beforeCursor ++ "' ORDER BY UUID__c DESC LIMIT " ++ (vars.pageSize + 1)
-else if (vars.afterCursor != null)
-    baseQuery ++ " AND UUID__c > '" ++ vars.afterCursor ++ "' ORDER BY UUID__c ASC LIMIT " ++ (vars.pageSize + 1)
+if (safeBefore != null)
+    baseQuery ++ " AND UUID__c < '" ++ safeBefore ++ "' ORDER BY UUID__c DESC LIMIT " ++ (vars.pageSize + 1)
+else if (safeAfter != null)
+    baseQuery ++ " AND UUID__c > '" ++ safeAfter ++ "' ORDER BY UUID__c ASC LIMIT " ++ (vars.pageSize + 1)
 else
     baseQuery ++ " ORDER BY UUID__c ASC LIMIT " ++ (vars.pageSize + 1)]]></ee:set-variable>
                 </ee:variables>

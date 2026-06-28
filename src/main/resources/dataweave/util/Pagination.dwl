@@ -19,6 +19,9 @@ type QueryParams = {|
 	sort?: Object
 |}
 
+fun isValidUuid(value: String | Null): Boolean =
+    value != null and (value matches /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)
+
 fun deserializeToken(token: String | Null): CursorState | Null =
     if (isEmpty(token)) null
     else try(() -> read(fromBase64(token), "application/json") as CursorState) orElse null
@@ -50,13 +53,17 @@ fun buildSoql(
   afterCursor: String | Null,
   beforeCursor: String | Null,
   pageSize: Number
-): String =
-  if (beforeCursor != null)
-    baseQuery ++ " WHERE UUID__c < '" ++ beforeCursor ++ "' ORDER BY UUID__c DESC LIMIT " ++ (pageSize + 1)
-  else if (afterCursor != null)
-    baseQuery ++ " WHERE UUID__c > '" ++ afterCursor ++ "' ORDER BY UUID__c ASC LIMIT " ++ (pageSize + 1)
+): String = do {
+  var safeBefore = if (beforeCursor != null and isValidUuid(beforeCursor)) beforeCursor else null
+  var safeAfter = if (afterCursor != null and isValidUuid(afterCursor)) afterCursor else null
+  ---
+  if (safeBefore != null)
+    baseQuery ++ " WHERE UUID__c < '" ++ safeBefore ++ "' ORDER BY UUID__c DESC LIMIT " ++ (pageSize + 1)
+  else if (safeAfter != null)
+    baseQuery ++ " WHERE UUID__c > '" ++ safeAfter ++ "' ORDER BY UUID__c ASC LIMIT " ++ (pageSize + 1)
   else
     baseQuery ++ " ORDER BY UUID__c ASC LIMIT " ++ (pageSize + 1)
+}
 
 fun paginate(
   records: Array<Any>,
