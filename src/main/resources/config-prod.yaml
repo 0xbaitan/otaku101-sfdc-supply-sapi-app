@@ -1,0 +1,7 @@
+mule:
+  api_id: '${mule.api_id}'
+
+sf:
+ client_id: '${sf.client_id}'
+ client_secret: '${secure::sf.client_secret}'
+ domain: '${sf.domain}'
