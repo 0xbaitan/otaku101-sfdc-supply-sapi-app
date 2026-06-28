@@ -8,7 +8,7 @@ http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mu
 http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
 http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
 http://www.mulesoft.org/schema/mule/java http://www.mulesoft.org/schema/mule/java/current/mule-java.xsd">
-	<sub-flow name="validate-supplier" doc:id="189e7ffe-6946-4774-868a-8617db83898c" >
+	<sub-flow name="validate-supplier" doc:name="VALIDATE: Supplier" doc:id="189e7ffe-6946-4774-868a-8617db83898c" >
 		<choice doc:name="payload.email" doc:id="efcfba19-2dbb-4418-8ac3-7cabe8d9d3ac" >
 			<when expression="#[payload.email?]">
 				<validation:is-email doc:name="VALIDATE: Email" doc:id="e3eda961-9791-4739-b66d-d2f3c3a81e8f" email="#[payload.email]" message="#[&quot;Email provided is not in the correct format. Email provided: '$(payload.email)'&quot;]">
@@ -50,12 +50,12 @@ http://www.mulesoft.org/schema/mule/java http://www.mulesoft.org/schema/mule/jav
 			</otherwise>
 		</choice>
 	</sub-flow>
-	<flow name="create-supplier" doc:id="e3a94ccb-1a67-417c-a25f-144e376e2dbc">
-		<try doc:name="Try" doc:id="89d37fa7-f6dc-4b49-a4ca-edf75187dc7a" >
+	<flow name="create-supplier" doc:name="CREATE: Supplier" doc:id="e3a94ccb-1a67-417c-a25f-144e376e2dbc">
+		<try doc:name="TRY: Validate Supplier" doc:id="89d37fa7-f6dc-4b49-a4ca-edf75187dc7a" >
 			<flow-ref doc:name="INVOKE: Validate Supplier Details" doc:id="8d7e002e-ce14-4a02-b133-449dc0adfbbc" name="validate-supplier"/>
 			<error-handler ref="error-handlers__handle-validation-failures" />
 		</try>
-		<try doc:name="Try" doc:id="d2cc7c69-a136-4a86-b7d8-027591bf9856" >
+		<try doc:name="TRY: Create Supplier in Salesforce" doc:id="d2cc7c69-a136-4a86-b7d8-027591bf9856" >
 			<set-variable value="#[%dw 2.0&#10;import uuid7 from dataweave::util::Id&#10;---&#10;uuid7()]" doc:name="SET: id" doc:id="0bf71de5-7cb2-4a14-9617-3d1644904277" variableName="id"/>
 			<salesforce:create doc:name="CREATE: Supplier" doc:id="8f790905-7724-4a25-a5b7-3e8acfb2d1e4" config-ref="SalesforceConfig" type="Supplier__c">
 			<salesforce:records><![CDATA[#[%dw 2.0
@@ -90,12 +90,12 @@ output application/java
 		</ee:transform>
 		<error-handler ref="error-handlers__handle-validation-failures" />
 	</flow>
-	<flow name="update-supplier" doc:id="a89bfd31-64cb-4929-8712-67229d2d6be2">
-		<try doc:name="Try" doc:id="5e91a6e5-3f61-45b3-9320-87d3197dd125">
+	<flow name="update-supplier" doc:name="UPDATE: Supplier" doc:id="a89bfd31-64cb-4929-8712-67229d2d6be2">
+		<try doc:name="TRY: Validate Supplier Details" doc:id="5e91a6e5-3f61-45b3-9320-87d3197dd125">
 			<flow-ref doc:name="INVOKE: Validate Supplier Details" doc:id="7bdbea8b-c7fe-41c3-b6e2-5483cf89d30c" name="validate-supplier" />
 			<error-handler ref="error-handlers__handle-validation-failures" />
 		</try>
-		<try doc:name="Try" doc:id="03938493-5da4-48fc-b0da-b905dbcb7c1e" >
+		<try doc:name="TRY: Update Supplier in Salesforce" doc:id="03938493-5da4-48fc-b0da-b905dbcb7c1e" >
 			<salesforce:upsert doc:name="UPDATE: Supplier" doc:id="1f184dd2-aac9-428c-b0b8-ac7a9e41460b" config-ref="SalesforceConfig" objectType="Supplier__c" externalIdFieldName="UUID__c">
 				<salesforce:records ><![CDATA[#[[{
 	UUID__c: vars.id,
@@ -109,7 +109,7 @@ output application/java
 			<logger level="INFO" doc:name="INFO: " doc:id="f905f098-7522-439b-9f44-48b72f437863" message="#[&quot;Raw results: $(write(payload, 'application/json'))&quot;]" />
 			<error-handler ref="error-handlers__handle-salesforce-failures" />
 		</try>
-		<ee:transform doc:name="Transform Message" doc:id="ac1811f3-7e21-4d9b-a2d1-09462bf956c0" >
+		<ee:transform doc:name="PASS: Updated Supplier" doc:id="ac1811f3-7e21-4d9b-a2d1-09462bf956c0" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
 output application/json
@@ -119,8 +119,8 @@ payload]]></ee:set-payload>
 		</ee:transform>
 		<error-handler ref="error-handlers__handle-validation-failures" />
 	</flow>
-	<flow name="find-supplier-by-id" doc:id="0ddee6c0-61da-4ce5-91ff-6bca75797e51" >
-		<try doc:name="Try" doc:id="0002ef9a-560d-4f19-8026-927956fdc558" >
+	<flow name="find-supplier-by-id" doc:name="GET: Supplier By Id" doc:id="0ddee6c0-61da-4ce5-91ff-6bca75797e51" >
+		<try doc:name="TRY: Query Supplier by Id" doc:id="0002ef9a-560d-4f19-8026-927956fdc558" >
 			<salesforce:query doc:name="QUERY: Supplier by Id" doc:id="2c5bb4f1-7e23-4e8c-b6b4-716cfce5e82a" config-ref="SalesforceConfig">
 				<salesforce:salesforce-query ><![CDATA[SELECT UUID__c, Name, Email__c, Phone__c, Website__c, Status__c, CreatedDate, LastModifiedDate FROM Supplier__c WHERE UUID__c = ':id']]></salesforce:salesforce-query>
 				<salesforce:parameters ><![CDATA[#[output application/java
@@ -161,8 +161,8 @@ if (sizeOf(payload) == 0) 404 else 200]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
 	</flow>
-	<flow name="query-suppliers" doc:id="6561a53b-d0b2-4531-b1f4-9cb1e5fe0877" >
-		<try doc:name="Try" doc:id="2c554b59-e30b-4bd4-abbe-f33342cb1496" >
+	<flow name="query-suppliers" doc:name="GET: Query Suppliers" doc:id="6561a53b-d0b2-4531-b1f4-9cb1e5fe0877" >
+		<try doc:name="TRY: Query Paginated Suppliers" doc:id="2c554b59-e30b-4bd4-abbe-f33342cb1496" >
 			<ee:transform doc:name="SET: Pagination Params" doc:id="7e3f0e1b-1a23-4b5c-8d9e-0f1a2b3c4d5e" >
 				<ee:variables >
 					<ee:set-variable variableName="pageSize" ><![CDATA[%dw 2.0
