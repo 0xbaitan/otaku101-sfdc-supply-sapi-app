@@ -13,8 +13,8 @@ http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mu
 http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
 http://www.mulesoft.org/schema/mule/java http://www.mulesoft.org/schema/mule/java/current/mule-java.xsd">
 
-    <sub-flow name="validate-contact">
-        <choice>
+    <sub-flow name="validate-contact" doc:name="VALIDATE: Contact">
+        <choice doc:name="CHECK: Name Not Blank">
             <when expression="#[payload.name?]">
                 <validation:is-not-blank-string value="#[payload.name]" message="Contact name cannot be blank.">
                     <error-mapping sourceType="VALIDATION:BLANK_STRING" targetType="VALIDATION_FAILURE:BLANK_NAME" />
@@ -23,26 +23,26 @@ http://www.mulesoft.org/schema/mule/java http://www.mulesoft.org/schema/mule/jav
         </choice>
     </sub-flow>
 
-    <flow name="create-contact">
-        <try>
-            <flow-ref name="validate-contact" />
+    <flow name="create-contact" doc:name="CREATE: Contact">
+        <try doc:name="TRY: Validate Contact">
+            <flow-ref name="validate-contact" doc:name="INVOKE: Validate Contact" />
             <error-handler ref="error-handlers__handle-validation-failures" />
         </try>
-        <try>
+        <try doc:name="TRY: Create Contact in Salesforce">
             <set-variable variableName="contactId" value="#[import uuid7 from dataweave::util::Id --- uuid7()]" />
-            <salesforce:query config-ref="SalesforceConfig">
+            <salesforce:query config-ref="SalesforceConfig" doc:name="QUERY: Lookup Supplier by UUID">
                 <salesforce:salesforce-query>SELECT Id FROM Supplier__c WHERE UUID__c = ':supplierUuid' LIMIT 1</salesforce:salesforce-query>
                 <salesforce:parameters>#[{supplierUuid: vars.id}]</salesforce:parameters>
             </salesforce:query>
-            <choice>
+<choice doc:name="CHECK: Supplier Exists">
                 <when expression="#[sizeOf(payload) > 0]">
                     <set-variable variableName="supplierSfId" value="#[payload[0].Id]" />
                 </when>
                 <otherwise>
-                    <raise-error type="VALIDATION_FAILURE:RESOURCE_NOT_FOUND" description="Supplier not found" />
+                    <raise-error doc:name="RAISE: Supplier Not Found" type="VALIDATION_FAILURE:RESOURCE_NOT_FOUND" description="Supplier not found" />
                 </otherwise>
             </choice>
-            <salesforce:create config-ref="SalesforceConfig" type="Contact">
+            <salesforce:create config-ref="SalesforceConfig" doc:name="CREATE: Contact in Salesforce" type="Contact">
                 <salesforce:records>#[[{
                     UUID__c: vars.contactId,
                     Supplier__c: vars.supplierSfId,
@@ -55,7 +55,7 @@ http://www.mulesoft.org/schema/mule/java http://www.mulesoft.org/schema/mule/jav
             <logger level="INFO" message="#[%dw 2.0 import toString from dw::util::Coercions --- &quot;[$(toString(now()))] Contact created: $(write(payload, 'application/json'))&quot;]" />
             <error-handler ref="error-handlers__handle-salesforce-failures" />
         </try>
-        <ee:transform>
+        <ee:transform doc:name="SET: 201 Created Response">
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
 output application/json
@@ -71,16 +71,16 @@ output application/json
         <error-handler ref="error-handlers__handle-validation-failures" />
     </flow>
 
-    <flow name="find-contact-by-id">
-        <try>
-            <salesforce:query config-ref="SalesforceConfig">
+    <flow name="find-contact-by-id" doc:name="GET: Contact By Id">
+        <try doc:name="TRY: Query Contact by UUID">
+            <salesforce:query config-ref="SalesforceConfig" doc:name="QUERY: Contact by UUID">
                 <salesforce:salesforce-query>SELECT UUID__c, Name, Email, Phone, Title FROM Contact WHERE UUID__c = ':contactUuid' LIMIT 1</salesforce:salesforce-query>
                 <salesforce:parameters>#[{contactUuid: vars.id}]</salesforce:parameters>
             </salesforce:query>
             <logger level="INFO" message="#[%dw 2.0 import toString from dw::util::Coercions --- &quot;Raw Query Result: $(write(payload, 'application/json'))&quot;]" />
             <error-handler ref="error-handlers__handle-salesforce-failures" />
         </try>
-        <ee:transform>
+        <ee:transform doc:name="SET: Contact or 404 Response">
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
 output application/json
@@ -107,13 +107,13 @@ if (sizeOf(payload) == 0) 404 else 200]]></ee:set-variable>
         </ee:transform>
     </flow>
 
-    <flow name="update-contact">
-        <try>
-            <flow-ref name="validate-contact" />
+    <flow name="update-contact" doc:name="UPDATE: Contact">
+        <try doc:name="TRY: Validate Contact">
+            <flow-ref name="validate-contact" doc:name="INVOKE: Validate Contact" />
             <error-handler ref="error-handlers__handle-validation-failures" />
         </try>
-        <try>
-            <salesforce:upsert config-ref="SalesforceConfig" type="Contact" externalIdFieldName="UUID__c">
+        <try doc:name="TRY: Update Contact in Salesforce">
+            <salesforce:upsert config-ref="SalesforceConfig" doc:name="UPSERT: Contact by UUID" type="Contact" externalIdFieldName="UUID__c">
                 <salesforce:records>#[[{
                     UUID__c: vars.id,
                     (LastName: payload.name) if (payload.name?),
@@ -125,7 +125,7 @@ if (sizeOf(payload) == 0) 404 else 200]]></ee:set-variable>
             <logger level="INFO" message="#[&quot;Raw results: $(write(payload, 'application/json'))&quot;]" />
             <error-handler ref="error-handlers__handle-salesforce-failures" />
         </try>
-        <ee:transform>
+        <ee:transform doc:name="PASS: Updated Contact">
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
 output application/json
@@ -136,28 +136,28 @@ payload]]></ee:set-payload>
         <error-handler ref="error-handlers__handle-validation-failures" />
     </flow>
 
-    <flow name="delete-contact">
-        <try>
-            <salesforce:query config-ref="SalesforceConfig">
+    <flow name="delete-contact" doc:name="DELETE: Contact">
+        <try doc:name="TRY: Query and Delete Contact">
+            <salesforce:query config-ref="SalesforceConfig" doc:name="QUERY: Contact by UUID">
                 <salesforce:salesforce-query>SELECT Id FROM Contact WHERE UUID__c = ':contactUuid' LIMIT 1</salesforce:salesforce-query>
                 <salesforce:parameters>#[{contactUuid: vars.id}]</salesforce:parameters>
             </salesforce:query>
-            <salesforce:delete config-ref="SalesforceConfig" type="Contact">
+            <salesforce:delete config-ref="SalesforceConfig" doc:name="DELETE: Contact Records" type="Contact">
                 <salesforce:ids>#[payload map $.Id]</salesforce:ids>
             </salesforce:delete>
             <logger level="INFO" message="#[%dw 2.0 import toString from dw::util::Coercions --- &quot;[$(toString(now()))] Contact deleted: $(vars.id)&quot;]" />
             <error-handler ref="error-handlers__handle-salesforce-failures" />
         </try>
-        <ee:transform>
+        <ee:transform doc:name="SET: 204 No Content">
             <ee:variables>
                 <ee:set-variable variableName="httpStatus">204</ee:set-variable>
             </ee:variables>
         </ee:transform>
     </flow>
 
-    <flow name="query-contacts-by-supplier">
-        <try>
-            <ee:transform>
+    <flow name="query-contacts-by-supplier" doc:name="GET: Query Contacts By Supplier">
+        <try doc:name="TRY: Query Paginated Contacts">
+            <ee:transform doc:name="SET: Pagination Params">
                 <ee:variables>
                     <ee:set-variable variableName="pageSize"><![CDATA[%dw 2.0
 output application/java
@@ -173,7 +173,7 @@ output application/java
 attributes.queryParams.before]]></ee:set-variable>
                 </ee:variables>
             </ee:transform>
-            <ee:transform>
+            <ee:transform doc:name="BUILD: Cursor SOQL Query">
                 <ee:variables>
                     <ee:set-variable variableName="soql"><![CDATA[%dw 2.0
 import dw::util::Pagination
@@ -192,11 +192,11 @@ else
     baseQuery ++ " ORDER BY UUID__c ASC LIMIT " ++ (vars.pageSize + 1)]]></ee:set-variable>
                 </ee:variables>
             </ee:transform>
-            <salesforce:query config-ref="SalesforceConfig">
+            <salesforce:query config-ref="SalesforceConfig" doc:name="QUERY: Paginated Contacts">
                 <salesforce:salesforce-query>#[vars.soql]</salesforce:salesforce-query>
             </salesforce:query>
             <logger level="INFO" message="#[%dw 2.0 import toString from dw::util::Coercions --- &quot;Raw Query Result: $(write(payload, 'application/json'))&quot;]" />
-            <ee:transform>
+            <ee:transform doc:name="MAP: Paginated Contacts">
                 <ee:message>
                     <ee:set-payload><![CDATA[%dw 2.0
 import dw::util::Pagination
