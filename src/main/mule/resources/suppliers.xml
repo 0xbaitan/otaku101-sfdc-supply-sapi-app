@@ -159,57 +159,60 @@ output application/java
 		</ee:transform>
 	</flow>
 	<flow name="query-suppliers" doc:id="6561a53b-d0b2-4531-b1f4-9cb1e5fe0877" >
-		<flow-ref doc:name="INVOKE: Compute Parameters" doc:id="bdfb9fc0-bdbb-4970-b54b-c6786e95d75c" name="decode-cursor-token" target="parameters"/>
 		<try doc:name="Try" doc:id="2c554b59-e30b-4bd4-abbe-f33342cb1496" >
-			<set-variable value="#[%dw 2.0&#10;output application/json&#10;&#10;var isForwards = vars.parameters.targetDirection == &quot;forwards&quot;&#10;var hasTarget = vars.parameters.targetId != null&#10;&#10;// Flattening conditional arrays avoids mixing Null and String types&#10;var whereClauses: Array&lt;String&gt; = flatten([&#10;    if (vars.parameters.filters.status?) [&quot;Status__c = ':status'&quot;] else [],&#10;    if (vars.parameters.q != null) [&quot;Name LIKE ':q'&quot;] else [],&#10;    if (hasTarget and isForwards) [&quot;UUID__c &gt; ':targetId'&quot;] else [],&#10;    if (hasTarget and !isForwards) [&quot;UUID__c &lt; ':targetId'&quot;] else []&#10;])&#10;&#10;var whereString: String = if (isEmpty(whereClauses)) &quot;&quot; else &quot;WHERE &quot; ++ (whereClauses joinBy &quot; AND &quot;)&#10;&#10;var orderString: String = if (isForwards) &quot;ORDER BY UUID__c ASC&quot; else &quot;ORDER BY UUID__c DESC&quot;&#10;&#10;// Wrap conditional strings in arrays so flatten handles them cleanly&#10;var queryParts: Array&lt;String&gt; = flatten([&#10;    [&quot;SELECT UUID__c, Name, Email__c, Phone__c, Website__c, Status__c, CreatedDate, LastModifiedDate FROM Supplier__c&quot;],&#10;    if (whereString != &quot;&quot;) [whereString] else [],&#10;    [orderString],&#10;    [&quot;LIMIT :limit&quot;]&#10;])&#10;---&#10;queryParts joinBy &quot; &quot;]" doc:name="SET: soql" doc:id="4d87a3bd-10fc-4ff5-a1a2-6d5dff6f2d94" variableName="soql" />
-			<logger level="INFO" doc:name="INFO: soql" doc:id="d68eaeb9-97a4-4d35-8167-4183c7993f7a" message='#["SOQL: $(vars.soql)"]'/>
-			<salesforce:query-all doc:name="QUERY: Matching Suppliers " doc:id="11c7a96a-508e-43c9-b22a-3e8f8b2d01b2" config-ref="SalesforceConfig">
-				<salesforce:salesforce-query ><![CDATA[#[vars.soql]]]></salesforce:salesforce-query>
-				<salesforce:parameters ><![CDATA[#[%dw 2.0
-output application/json
+			<ee:transform doc:name="SET: Pagination Params" doc:id="7e3f0e1b-1a23-4b5c-8d9e-0f1a2b3c4d5e" >
+				<ee:variables >
+					<ee:set-variable variableName="pageSize" ><![CDATA[%dw 2.0
+output application/java
 ---
-{
-    limit: vars.parameters.limit default 25,
-    
-    // Conditionally include keys only if the data exists
-    (status: vars.parameters.filters.status) if (vars.parameters.filters.status?),
-    (q: "%" ++ vars.parameters.q as String ++ "%") if (vars.parameters.q != null),
-    (targetId: vars.parameters.targetId) if (vars.parameters.targetId != null)
-}]]]></salesforce:parameters>
-			</salesforce:query-all>
-			<ee:transform doc:name="Transform Message" doc:id="23206420-4bbd-4ea7-aee9-6d016c682751" >
+(attributes.queryParams.limit default 25) as Number]]></ee:set-variable>
+					<ee:set-variable variableName="afterCursor" ><![CDATA[%dw 2.0
+output application/java
+---
+attributes.queryParams.after]]></ee:set-variable>
+					<ee:set-variable variableName="beforeCursor" ><![CDATA[%dw 2.0
+output application/java
+---
+attributes.queryParams.before]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+			<ee:transform doc:name="SET: Build Cursor Query" doc:id="8f4e1d2c-3b5c-6d7e-9f0a-1b2c3d4e5f6a" >
+				<ee:variables >
+					<ee:set-variable variableName="soql" ><![CDATA[%dw 2.0
+import dw::util::Pagination
+output application/java
+---
+Pagination::buildSoql(
+	"SELECT UUID__c, Name, Email__c, Phone__c, Website__c, Status__c, CreatedDate, LastModifiedDate FROM Supplier__c",
+	vars.afterCursor,
+	vars.beforeCursor,
+	vars.pageSize
+)]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+			<salesforce:query doc:name="QUERY: Paginated Suppliers" doc:id="11c7a96a-508e-43c9-b22a-3e8f8b2d01b2" config-ref="SalesforceConfig">
+				<salesforce:salesforce-query ><![CDATA[#[vars.soql]]]></salesforce:salesforce-query>
+			</salesforce:query>
+			<logger level="INFO" doc:name="INFO: Raw Query Result" doc:id="62cf4d29-0501-41ca-8c29-5b2081adc9b5" message="#[%dw 2.0&#10;import toString from dw::util::Coercions&#10;---&#10;&quot;Raw Query Result: $(write(payload, 'application/json'))&quot;]"/>
+			<ee:transform doc:name="SET: Paginated Response" doc:id="9f244421-b093-47a0-bff2-5a497a62dc8d" >
 				<ee:message >
 					<ee:set-payload ><![CDATA[%dw 2.0
+import dw::util::Pagination
 output application/json
-import * from dataweave::util::Pagination
-import * from dw::core::Binaries
-var rawDbResults = payload default []
-var requestedLimit = (vars.parameters.limit default 25) as Number
-var incomingDirection = vars.parameters.targetDirection default "forward"
-var hasIncomingToken = (vars.parameters.before != null) or (vars.parameters.after != null)
-var currentFilters = vars.parameters.filters default {
-}
-var hasExtraRecord = sizeOf(rawDbResults) > requestedLimit
-var slicedResults = if ( hasExtraRecord ) rawDbResults[0 to (requestedLimit - 1)] else rawDbResults
-var finalResults = if ( incomingDirection == "backward" ) slicedResults[-1 to 0] else slicedResults
-var firstRecord = finalResults[0] default null
-var lastRecord = finalResults[-1] default null
-var wasMovingBackward = incomingDirection == "backward"
-var wasMovingForward = incomingDirection == "forward"
-var hasNext = if ( wasMovingForward ) hasExtraRecord else true
-var hasPrevious = if ( wasMovingBackward ) hasExtraRecord else (wasMovingForward and hasIncomingToken)
+---
+var result = Pagination::paginate(payload, vars.pageSize, vars.afterCursor, vars.beforeCursor)
 ---
 {
 	paging: {
 		cursors: {
-			before: if ( hasPrevious ) serializeToken(firstRecord, "backward", requestedLimit, currentFilters) else null,
-			after: if ( hasNext ) serializeToken(lastRecord, "forward", requestedLimit, currentFilters) else null
+			before: result.before,
+			after: result.after
 		},
-		hasNext: hasNext,
-		hasPrevious: hasPrevious,
-		limit: requestedLimit
+		hasNext: result.after != null,
+		hasPrevious: result.before != null,
+		limit: vars.pageSize
 	},
-	results: finalResults map {
+	results: result.data map {
 		id: $.UUID__c,
 		name: $.Name,
 		email: $.Email__c,
@@ -219,21 +222,14 @@ var hasPrevious = if ( wasMovingBackward ) hasExtraRecord else (wasMovingForward
 	}
 }]]></ee:set-payload>
 				</ee:message>
-			</ee:transform>
-			<logger level="INFO" doc:name="INFO: Raw Query Result" doc:id="62cf4d29-0501-41ca-8c29-5b2081adc9b5" message="#[%dw 2.0&#10;import toString from dw::util::Coercions&#10;---&#10;&quot;Raw Query Result: $(write(payload, 'application/json'))&quot;]"/>
-			<error-handler ref="error-handlers__handle-salesforce-failures" />
-		</try>
-		<ee:transform doc:name="SET: Success Payload &amp; 200 HTTP Status" doc:id="9f244421-b093-47a0-bff2-5a497a62dc8d" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[payload
-]]></ee:set-payload>
-			</ee:message>
-			<ee:variables >
-				<ee:set-variable variableName="httpStatus" ><![CDATA[%dw 2.0
+				<ee:variables >
+					<ee:set-variable variableName="httpStatus" ><![CDATA[%dw 2.0
 output application/java
 ---
 200]]></ee:set-variable>
-			</ee:variables>
-		</ee:transform>
+				</ee:variables>
+			</ee:transform>
+			<error-handler ref="error-handlers__handle-salesforce-failures" />
+		</try>
 	</flow>
 </mule>
