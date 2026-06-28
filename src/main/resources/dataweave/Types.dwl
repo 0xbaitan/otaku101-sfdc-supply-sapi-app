@@ -47,19 +47,19 @@ type UpdateContact = {
 
 type Facility = {
     name: String,
-    type?: "Warehouse" | "Manufacturing" | "Distribution" | "Office",
+    facilityType?: "Warehouse" | "Manufacturing" | "Distribution" | "Office",
     status?: "Active" | "Inactive" | "Under Maintenance"
 }
 
 type CreateFacilityRequest = {
     name: String,
-    type?: "Warehouse" | "Manufacturing" | "Distribution" | "Office",
+    facilityType?: "Warehouse" | "Manufacturing" | "Distribution" | "Office",
     status?: "Active" | "Inactive" | "Under Maintenance"
 }
 
 type UpdateFacility = {
     name?: String,
-    type?: "Warehouse" | "Manufacturing" | "Distribution" | "Office",
+    facilityType?: "Warehouse" | "Manufacturing" | "Distribution" | "Office",
     status?: "Active" | "Inactive" | "Under Maintenance"
 }
 

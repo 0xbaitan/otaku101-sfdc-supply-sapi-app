@@ -47,7 +47,7 @@ http://www.mulesoft.org/schema/mule/java http://www.mulesoft.org/schema/mule/jav
                     UUID__c: vars.facilityId,
                     Supplier__c: vars.supplierSfId,
                     Name: payload.name,
-                    (Type__c: payload.type) if (payload.type != null),
+                    (Type__c: payload.facilityType) if (payload.facilityType != null),
                     (Status__c: payload.status) if (payload.status != null)
                 }]]</salesforce:records>
             </salesforce:create>
@@ -115,7 +115,7 @@ if (sizeOf(payload) == 0) 404 else 200]]></ee:set-variable>
                 <salesforce:records>#[[{
                     UUID__c: vars.id,
                     (Name: payload.name) if (payload.name?),
-                    (Type__c: payload.type) if (payload.type != null),
+                    (Type__c: payload.facilityType) if (payload.facilityType != null),
                     (Status__c: payload.status) if (payload.status != null)
                 }]]</salesforce:records>
             </salesforce:upsert>

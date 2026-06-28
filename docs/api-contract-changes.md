@@ -46,7 +46,7 @@ The following resource types need JSON schemas defined in the RAML spec:
 
 ### 4. DataWeave vs RAML status value mismatch
 
-The DataWeave code (`Supplier.dwl`) uses uppercase status values:
+The DataWeave code (`Types.dwl`) uses uppercase status values:
 ```
 status?: "ACTIVE" | "INACTIVE" | "ONBOARDING"
 ```
