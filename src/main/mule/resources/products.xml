@@ -235,4 +235,39 @@ var result = Pagination::paginate(payload, vars.pageSize, vars.afterCursor, vars
             <error-handler ref="error-handlers__handle-salesforce-failures" />
         </try>
     </flow>
+
+    <flow name="get-pricebook-template">
+        <try>
+            <salesforce:query config-ref="SalesforceConfig">
+                <salesforce:salesforce-query>SELECT UUID__c, Name, SKU__c, Price__c FROM Product__c WHERE Supplier__r.UUID__c = ':supplierUuid'</salesforce:salesforce-query>
+                <salesforce:parameters>#[{supplierUuid: vars.id}]</salesforce:parameters>
+            </salesforce:query>
+            <error-handler ref="error-handlers__handle-salesforce-failures" />
+        </try>
+        <ee:transform>
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/xlsx
+---
+{
+    "Pricebook Template": payload map {
+        "Product ID": $.UUID__c,
+        "Name": $.Name,
+        "SKU": $.SKU__c default "",
+        "Price": $.Price__c default 0,
+        "Quantity": 0
+    }
+}]]></ee:set-payload>
+            </ee:message>
+            <ee:variables>
+                <ee:set-variable variableName="httpStatus">200</ee:set-variable>
+                <ee:set-variable variableName="outboundHeaders"><![CDATA[%dw 2.0
+output application/java
+---
+{
+    "Content-Disposition": "attachment; filename=\"pricebook-template-" ++ vars.id ++ ".xlsx\""
+}]]></ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+    </flow>
 </mule>

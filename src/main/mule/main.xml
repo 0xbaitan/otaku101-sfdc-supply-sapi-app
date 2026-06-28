@@ -250,12 +250,12 @@ output application/json
         <flow-ref name="find-facility-by-id" />
     </flow>
     <flow name="get:\suppliers\(id)\pricebooks\template:main-config">
-        <ee:transform doc:name="Transform Message">
+        <ee:transform doc:name="SET: id">
             <ee:variables>
                 <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
             </ee:variables>
         </ee:transform>
-        <logger level="INFO" message="get:\suppliers\(id)\pricebooks\template:main-config" />
+        <flow-ref name="get-pricebook-template" />
     </flow>
     <flow name="get:\product-categories:main-config">
         <flow-ref name="query-product-categories" />
