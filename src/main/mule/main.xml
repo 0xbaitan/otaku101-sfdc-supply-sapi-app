@@ -19,7 +19,7 @@
     </salesforce:sfdc-config>
     <api-gateway:autodiscovery apiId="${mule.api_id}" ignoreBasePath="true" doc:name="API Autodiscovery" doc:id="eeeb93eb-5a6f-41a6-a479-a09753d364b7" flowRef="main-main" />
     <secure-properties:config name="SecurePropertiesConfig" doc:name="Secure Properties Config" doc:id="b64894cd-c741-475e-8381-b2f50aabc186" file="config-${mule.env}.yaml" key="${secure.key}" />
-    <flow name="main-main">
+    <flow name="main-main" doc:name="MAIN: API Router">
         <http:listener config-ref="main-httpListenerConfig" path="/api/*">
             <http:response statusCode="#[vars.httpStatus default 200]">
                 <http:headers>#[vars.outboundHeaders default {}]</http:headers>
@@ -32,7 +32,7 @@
         <apikit:router config-ref="main-config" />
         <error-handler>
             <on-error-propagate type="APIKIT:BAD_REQUEST">
-                <ee:transform doc:name="Transform Message">
+                <ee:transform doc:name="SET: 400 Bad Request Response">
                     <ee:message>
                         <ee:set-payload><![CDATA[%dw 2.0
 output application/json
@@ -45,7 +45,7 @@ output application/json
                 </ee:transform>
             </on-error-propagate>
             <on-error-propagate type="APIKIT:NOT_FOUND">
-                <ee:transform doc:name="Transform Message">
+                <ee:transform doc:name="SET: 404 Resource Not Found Response">
                     <ee:message>
                         <ee:set-payload><![CDATA[%dw 2.0
 output application/json
@@ -58,7 +58,7 @@ output application/json
                 </ee:transform>
             </on-error-propagate>
             <on-error-propagate type="APIKIT:METHOD_NOT_ALLOWED">
-                <ee:transform doc:name="Transform Message">
+                <ee:transform doc:name="SET: 405 Method Not Allowed Response">
                     <ee:message>
                         <ee:set-payload><![CDATA[%dw 2.0
 output application/json
@@ -71,7 +71,7 @@ output application/json
                 </ee:transform>
             </on-error-propagate>
             <on-error-propagate type="APIKIT:NOT_ACCEPTABLE">
-                <ee:transform doc:name="Transform Message">
+                <ee:transform doc:name="SET: 406 Not Acceptable Response">
                     <ee:message>
                         <ee:set-payload><![CDATA[%dw 2.0
 output application/json
@@ -84,7 +84,7 @@ output application/json
                 </ee:transform>
             </on-error-propagate>
             <on-error-propagate type="APIKIT:UNSUPPORTED_MEDIA_TYPE">
-                <ee:transform doc:name="Transform Message">
+                <ee:transform doc:name="SET: 415 Unsupported Media Type Response">
                     <ee:message>
                         <ee:set-payload><![CDATA[%dw 2.0
 output application/json
@@ -97,7 +97,7 @@ output application/json
                 </ee:transform>
             </on-error-propagate>
             <on-error-propagate type="APIKIT:NOT_IMPLEMENTED">
-                <ee:transform doc:name="Transform Message">
+                <ee:transform doc:name="SET: 501 Not Implemented Response">
                     <ee:message>
                         <ee:set-payload><![CDATA[%dw 2.0
 output application/json
@@ -111,7 +111,7 @@ output application/json
             </on-error-propagate>
         </error-handler>
     </flow>
-    <flow name="main-console">
+    <flow name="main-console" doc:name="MAIN: API Console">
         <http:listener config-ref="main-httpListenerConfig" path="/console/*">
             <http:response statusCode="#[vars.httpStatus default 200]">
                 <http:headers>#[vars.outboundHeaders default {}]</http:headers>
@@ -124,7 +124,7 @@ output application/json
         <apikit:console config-ref="main-config" />
         <error-handler>
             <on-error-propagate type="APIKIT:NOT_FOUND">
-                <ee:transform doc:name="Transform Message">
+                <ee:transform doc:name="SET: 404 Console Resource Not Found Response">
                     <ee:message>
                         <ee:set-payload><![CDATA[%dw 2.0
 output application/json
@@ -138,10 +138,9 @@ output application/json
             </on-error-propagate>
         </error-handler>
     </flow>
-    <flow name="get:\suppliers:main-config">
-        <flow-ref doc:name="FLOW: Query Suppliers" doc:id="f12a7b2d-f283-40b0-a71e-f08b467fbc41" name="query-suppliers" />
+    <flow name="get:\suppliers:main-config" doc:name="GET: Query Suppliers">doc:name="GET: Query Suppliers"> doc:id="f12a7b2d-f283-40b0-a71e-f08b467fbc41" name="query-suppliers" />
     </flow>
-    <flow name="get:\suppliers\(id):main-config">
+    <flow name="get:\suppliers\(id):main-config" doc:name="GET: Get Supplier By Id">
         <ee:transform doc:name="SET: id">
             <ee:variables>
                 <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
@@ -149,10 +148,10 @@ output application/json
         </ee:transform>
         <flow-ref doc:name="FLOW: Get Supplier By Id" doc:id="12f50aaf-304c-4993-8554-36c142dc12b3" name="find-supplier-by-id" />
     </flow>
-    <flow name="post:\suppliers:application\json:main-config">
+    <flow name="post:\suppliers:application\json:main-config" doc:name="POST: Create Supplier">
         <flow-ref doc:name="FLOW: Create Supplier" doc:id="7bb1bb38-a754-40c7-9b3e-525c6f568820" name="create-supplier" />
     </flow>
-    <flow name="put:\facilities\(id)\inventory:application\json:main-config">
+    <flow name="put:\facilities\(id)\inventory:application\json:main-config" doc:name="PUT: Replace Facility Inventory">
         <ee:transform doc:name="SET: id">
             <ee:variables>
                 <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
@@ -160,7 +159,7 @@ output application/json
         </ee:transform>
         <flow-ref name="replace-inventory" />
     </flow>
-    <flow name="delete:\contacts\(id):main-config">
+    <flow name="delete:\contacts\(id):main-config" doc:name="DELETE: Delete Contact">
         <ee:transform doc:name="SET: id">
             <ee:variables>
                 <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
@@ -168,7 +167,7 @@ output application/json
         </ee:transform>
         <flow-ref name="delete-contact" />
     </flow>
-    <flow name="delete:\product-categories\(id):main-config">
+    <flow name="delete:\product-categories\(id):main-config" doc:name="DELETE: Delete Product Category">
         <ee:transform doc:name="SET: id">
             <ee:variables>
                 <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
@@ -176,7 +175,7 @@ output application/json
         </ee:transform>
         <flow-ref name="delete-product-category" />
     </flow>
-    <flow name="patch:\contacts\(id):application\json:main-config">
+    <flow name="patch:\contacts\(id):application\json:main-config" doc:name="PATCH: Update Contact">
         <ee:transform doc:name="SET: id">
             <ee:variables>
                 <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
@@ -184,7 +183,7 @@ output application/json
         </ee:transform>
         <flow-ref name="update-contact" />
     </flow>
-    <flow name="patch:\facilities\(id):application\json:main-config">
+    <flow name="patch:\facilities\(id):application\json:main-config" doc:name="PATCH: Update Facility">
         <ee:transform doc:name="SET: id">
             <ee:variables>
                 <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
@@ -192,7 +191,7 @@ output application/json
         </ee:transform>
         <flow-ref name="update-facility" />
     </flow>
-    <flow name="patch:\products\(id):application\json:main-config">
+    <flow name="patch:\products\(id):application\json:main-config" doc:name="PATCH: Update Product">
         <ee:transform doc:name="SET: id">
             <ee:variables>
                 <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
@@ -200,7 +199,7 @@ output application/json
         </ee:transform>
         <flow-ref name="update-product" />
     </flow>
-    <flow name="patch:\product-categories\(id):application\json:main-config">
+    <flow name="patch:\product-categories\(id):application\json:main-config" doc:name="PATCH: Update Product Category">
         <ee:transform doc:name="SET: id">
             <ee:variables>
                 <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
@@ -208,7 +207,7 @@ output application/json
         </ee:transform>
         <flow-ref name="update-product-category" />
     </flow>
-    <flow name="patch:\suppliers\(id):application\json:main-config">
+    <flow name="patch:\suppliers\(id):application\json:main-config" doc:name="PATCH: Update Supplier">
         <ee:transform doc:name="SET: id">
             <ee:variables>
                 <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
@@ -216,7 +215,7 @@ output application/json
         </ee:transform>
         <flow-ref doc:name="FLOW: Update Supplier By Id" doc:id="845805fb-48f6-4f79-95c5-35d14890ac04" name="update-supplier" />
     </flow>
-    <flow name="get:\suppliers\(id)\contacts:main-config">
+    <flow name="get:\suppliers\(id)\contacts:main-config" doc:name="GET: Query Contacts By Supplier">
         <ee:transform doc:name="SET: id">
             <ee:variables>
                 <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
@@ -224,7 +223,7 @@ output application/json
         </ee:transform>
         <flow-ref name="query-contacts-by-supplier" />
     </flow>
-    <flow name="get:\contacts\(id):main-config">
+    <flow name="get:\contacts\(id):main-config" doc:name="GET: Get Contact By Id">
         <ee:transform doc:name="SET: id">
             <ee:variables>
                 <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
@@ -232,7 +231,7 @@ output application/json
         </ee:transform>
         <flow-ref name="find-contact-by-id" />
     </flow>
-    <flow name="get:\suppliers\(id)\facilities:main-config">
+    <flow name="get:\suppliers\(id)\facilities:main-config" doc:name="GET: Query Facilities By Supplier">
         <ee:transform doc:name="SET: id">
             <ee:variables>
                 <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
@@ -240,7 +239,7 @@ output application/json
         </ee:transform>
         <flow-ref name="query-facilities-by-supplier" />
     </flow>
-    <flow name="get:\facilities\(id):main-config">
+    <flow name="get:\facilities\(id):main-config" doc:name="GET: Get Facility By Id">
         <ee:transform doc:name="SET: id">
             <ee:variables>
                 <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
@@ -248,7 +247,7 @@ output application/json
         </ee:transform>
         <flow-ref name="find-facility-by-id" />
     </flow>
-    <flow name="get:\suppliers\(id)\pricebooks\template:main-config">
+    <flow name="get:\suppliers\(id)\pricebooks\template:main-config" doc:name="GET: Get Pricebook Template">
         <ee:transform doc:name="SET: id">
             <ee:variables>
                 <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
@@ -256,10 +255,10 @@ output application/json
         </ee:transform>
         <flow-ref name="get-pricebook-template" />
     </flow>
-    <flow name="get:\product-categories:main-config">
+    <flow name="get:\product-categories:main-config" doc:name="GET: Query Product Categories">
         <flow-ref name="query-product-categories" />
     </flow>
-    <flow name="get:\suppliers\(id)\products:main-config">
+    <flow name="get:\suppliers\(id)\products:main-config" doc:name="GET: Query Products By Supplier">
         <ee:transform doc:name="SET: id">
             <ee:variables>
                 <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
@@ -267,7 +266,7 @@ output application/json
         </ee:transform>
         <flow-ref name="query-products-by-supplier" />
     </flow>
-    <flow name="get:\products\(id):main-config">
+    <flow name="get:\products\(id):main-config" doc:name="GET: Get Product By Id">
         <ee:transform doc:name="SET: id">
             <ee:variables>
                 <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
@@ -275,7 +274,7 @@ output application/json
         </ee:transform>
         <flow-ref name="find-product-by-id" />
     </flow>
-    <flow name="get:\product-categories\(id):main-config">
+    <flow name="get:\product-categories\(id):main-config" doc:name="GET: Get Product Category By Id">
         <ee:transform doc:name="SET: id">
             <ee:variables>
                 <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
@@ -283,7 +282,7 @@ output application/json
         </ee:transform>
         <flow-ref name="find-product-category-by-id" />
     </flow>
-    <flow name="post:\suppliers\(id)\contacts:application\json:main-config">
+    <flow name="post:\suppliers\(id)\contacts:application\json:main-config" doc:name="POST: Create Contact">
         <ee:transform doc:name="SET: id">
             <ee:variables>
                 <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
@@ -291,7 +290,7 @@ output application/json
         </ee:transform>
         <flow-ref name="create-contact" />
     </flow>
-    <flow name="post:\suppliers\(id)\facilities:application\json:main-config">
+    <flow name="post:\suppliers\(id)\facilities:application\json:main-config" doc:name="POST: Create Facility">
         <ee:transform doc:name="SET: id">
             <ee:variables>
                 <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
@@ -299,10 +298,10 @@ output application/json
         </ee:transform>
         <flow-ref name="create-facility" />
     </flow>
-    <flow name="post:\product-categories:application\json:main-config">
+    <flow name="post:\product-categories:application\json:main-config" doc:name="POST: Create Product Category">
         <flow-ref name="create-product-category" />
     </flow>
-    <flow name="post:\suppliers\(id)\products:application\json:main-config">
+    <flow name="post:\suppliers\(id)\products:application\json:main-config" doc:name="POST: Create Product">
         <ee:transform doc:name="SET: id">
             <ee:variables>
                 <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
