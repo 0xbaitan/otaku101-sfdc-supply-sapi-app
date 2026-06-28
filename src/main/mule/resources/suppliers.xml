@@ -57,7 +57,7 @@ http://www.mulesoft.org/schema/mule/java http://www.mulesoft.org/schema/mule/jav
 		</try>
 		<try doc:name="TRY: Create Supplier in Salesforce" doc:id="d2cc7c69-a136-4a86-b7d8-027591bf9856" >
 			<set-variable value="#[%dw 2.0&#10;import uuid7 from dataweave::util::Id&#10;---&#10;uuid7()]" doc:name="SET: id" doc:id="0bf71de5-7cb2-4a14-9617-3d1644904277" variableName="id"/>
-			<salesforce:create doc:name="CREATE: Supplier" doc:id="8f790905-7724-4a25-a5b7-3e8acfb2d1e4" config-ref="SalesforceConfig" type="Supplier__c">
+			<salesforce:create doc:name="CREATE: Supplier" doc:id="8f790905-7724-4a25-a5b7-3e8acfb2d1e4" config-ref="SalesforceConfig" objectType="Supplier__c">
 			<salesforce:records><![CDATA[#[%dw 2.0
 ---
 [{
@@ -202,7 +202,7 @@ Pagination::buildSoql(
 					<ee:set-payload ><![CDATA[%dw 2.0
 import dw::util::Pagination
 output application/json
----
+
 var result = Pagination::paginate(payload, vars.pageSize, vars.afterCursor, vars.beforeCursor)
 ---
 {

@@ -138,7 +138,8 @@ output application/json
             </on-error-propagate>
         </error-handler>
     </flow>
-    <flow name="get:\suppliers:main-config" doc:name="GET: Query Suppliers">doc:name="GET: Query Suppliers"> doc:id="f12a7b2d-f283-40b0-a71e-f08b467fbc41" name="query-suppliers" />
+    <flow name="get:\suppliers:main-config" doc:name="GET: Query Suppliers">
+        <flow-ref doc:id="f12a7b2d-f283-40b0-a71e-f08b467fbc41" name="query-suppliers" />
     </flow>
     <flow name="get:\suppliers\(id):main-config" doc:name="GET: Get Supplier By Id">
         <ee:transform doc:name="SET: id">

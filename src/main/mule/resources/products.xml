@@ -31,9 +31,13 @@ http://www.mulesoft.org/schema/mule/java http://www.mulesoft.org/schema/mule/jav
         <try doc:name="TRY: Create Product in Salesforce">
             <set-variable variableName="productId" value="#[import uuid7 from dataweave::util::Id --- uuid7()]" />
             <salesforce:query config-ref="SalesforceConfig" doc:name="QUERY: Lookup Supplier by UUID">
-                <salesforce:salesforce-query>SELECT Id FROM Supplier__c WHERE UUID__c = ':supplierUuid' LIMIT 1
-                <salesforce:parameters>#[{supplierUuid: vars.id}]</salesforce:parameters>
-            </salesforce:query>
+                <salesforce:salesforce-query><![CDATA[SELECT Id FROM Supplier__c WHERE UUID__c = ':supplierId' LIMIT 1]]></salesforce:salesforce-query>
+				<salesforce:parameters ><![CDATA[#[{
+	supplierId: vars.supplierId
+}]]]></salesforce:parameters>
+               
+            
+</salesforce:query>
             <choice doc:name="CHECK: Supplier Exists">
                 <when expression="#[sizeOf(payload) > 0]">
                     <set-variable variableName="supplierSfId" value="#[payload[0].Id]" />
@@ -51,7 +55,7 @@ http://www.mulesoft.org/schema/mule/java http://www.mulesoft.org/schema/mule/jav
                     <set-variable variableName="categorySfId" value="#[payload[0].Id]" />
                 </when>
             </choice>
-            <salesforce:create config-ref="SalesforceConfig" doc:name="CREATE: Product in Salesforce" type="Product__c">
+            <salesforce:create config-ref="SalesforceConfig" doc:name="CREATE: Product in Salesforce" objectType="Product__c">
                 <salesforce:records>#[[{
                     UUID__c: vars.productId,
                     Supplier__c: vars.supplierSfId,
@@ -134,7 +138,7 @@ if (sizeOf(payload) == 0) 404 else 200]]></ee:set-variable>
                     <set-variable variableName="categorySfId" value="#[payload[0].Id]" />
                 </when>
             </choice>
-            <salesforce:upsert config-ref="SalesforceConfig" doc:name="UPSERT: Product by UUID" type="Product__c" externalIdFieldName="UUID__c">
+            <salesforce:upsert config-ref="SalesforceConfig" doc:name="UPSERT: Product by UUID" objectType="Product__c" externalIdFieldName="UUID__c">
                 <salesforce:records>#[[{
                     UUID__c: vars.id,
                     (Name: payload.name) if (payload.name?),
@@ -181,7 +185,7 @@ attributes.queryParams.before]]></ee:set-variable>
                     <ee:set-variable variableName="soql"><![CDATA[%dw 2.0
 import dw::util::Pagination
 output application/java
----
+
 var safeSupplierId = if (Pagination::isValidUuid(vars.id)) vars.id else ""
 var safeBefore = if (vars.beforeCursor != null and Pagination::isValidUuid(vars.beforeCursor)) vars.beforeCursor else null
 var safeAfter = if (vars.afterCursor != null and Pagination::isValidUuid(vars.afterCursor)) vars.afterCursor else null
@@ -204,7 +208,7 @@ else
                     <ee:set-payload><![CDATA[%dw 2.0
 import dw::util::Pagination
 output application/json
----
+
 var result = Pagination::paginate(payload, vars.pageSize, vars.afterCursor, vars.beforeCursor)
 ---
 {

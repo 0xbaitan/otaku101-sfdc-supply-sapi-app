@@ -30,7 +30,7 @@ http://www.mulesoft.org/schema/mule/java http://www.mulesoft.org/schema/mule/jav
         </try>
         <try doc:name="TRY: Create Product Category in Salesforce">
             <set-variable variableName="categoryId" value="#[import uuid7 from dataweave::util::Id --- uuid7()]" />
-            <salesforce:create config-ref="SalesforceConfig" doc:name="CREATE: Product Category in Salesforce" type="ProductCategory__c">
+            <salesforce:create config-ref="SalesforceConfig" doc:name="CREATE: Product Category in Salesforce" objectType="ProductCategory__c">
                 <salesforce:records>#[[{
                     UUID__c: vars.categoryId,
                     Name: payload.name,
@@ -96,12 +96,12 @@ if (sizeOf(payload) == 0) 404 else 200]]></ee:set-variable>
             <error-handler ref="error-handlers__handle-validation-failures" />
         </try>
         <try doc:name="TRY: Upsert Product Category by UUID">
-            <salesforce:upsert config-ref="SalesforceConfig" doc:name="UPSERT: Product Category by UUID" type="ProductCategory__c" externalIdFieldName="UUID__c">
-                <salesforce:records>#[[{
+            <salesforce:upsert config-ref="SalesforceConfig" doc:name="UPSERT: Product Category by UUID" objectType="ProductCategory__c" externalIdFieldName="UUID__c">
+                <salesforce:records><![CDATA[#[[{
                     UUID__c: vars.id,
                     (Name: payload.name) if (payload.name?),
                     (Description__c: payload.description) if (payload.description != null)
-                }]]</salesforce:records>
+                }]]]]></salesforce:records>
             </salesforce:upsert>
             <logger level="INFO" message="#[&quot;Raw results: $(write(payload, 'application/json'))&quot;]" />
             <error-handler ref="error-handlers__handle-salesforce-failures" />
@@ -123,7 +123,7 @@ payload]]></ee:set-payload>
                 <salesforce:salesforce-query>SELECT Id FROM ProductCategory__c WHERE UUID__c = ':categoryUuid' LIMIT 1</salesforce:salesforce-query>
                 <salesforce:parameters>#[{categoryUuid: vars.id}]</salesforce:parameters>
             </salesforce:query>
-            <salesforce:delete config-ref="SalesforceConfig" doc:name="DELETE: Category by SFDC Id" type="ProductCategory__c">
+            <salesforce:delete config-ref="SalesforceConfig" doc:name="DELETE: Category by SFDC Id">
                 <salesforce:ids>#[payload map $.Id]</salesforce:ids>
             </salesforce:delete>
             <logger level="INFO" message="#[%dw 2.0 import toString from dw::util::Coercions --- &quot;[$(toString(now()))] Product category deleted: $(vars.id)&quot;]" />
@@ -177,7 +177,7 @@ Pagination::buildSoql(
                     <ee:set-payload><![CDATA[%dw 2.0
 import dw::util::Pagination
 output application/json
----
+
 var result = Pagination::paginate(payload, vars.pageSize, vars.afterCursor, vars.beforeCursor)
 ---
 {
@@ -198,7 +198,7 @@ var result = Pagination::paginate(payload, vars.pageSize, vars.afterCursor, vars
 }]]></ee:set-payload>
                 </ee:message>
                 <ee:variables>
-                    <ee:set-variable variableName="httpStatus">200</ee:set-variable>
+                    <ee:set-variable variableName="httpStatus"><![CDATA[200]]></ee:set-variable>
                 </ee:variables>
             </ee:transform>
             <error-handler ref="error-handlers__handle-salesforce-failures" />
