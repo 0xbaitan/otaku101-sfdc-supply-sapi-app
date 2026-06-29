@@ -16,7 +16,7 @@ http://www.mulesoft.org/schema/mule/java http://www.mulesoft.org/schema/mule/jav
     <sub-flow name="validate-contact" doc:name="VALIDATE: Contact">
         <choice doc:name="CHECK: Name Not Blank">
             <when expression="#[payload.name?]">
-                <validation:is-not-blank-string value="#[payload.name]" message="Contact name cannot be blank.">
+                <validation:is-not-blank-string value="#[payload.firstName]" message="Contact name cannot be blank.">
                     <error-mapping sourceType="VALIDATION:BLANK_STRING" targetType="VALIDATION_FAILURE:BLANK_NAME" />
                 </validation:is-not-blank-string>
             </when>
@@ -24,35 +24,44 @@ http://www.mulesoft.org/schema/mule/java http://www.mulesoft.org/schema/mule/jav
     </sub-flow>
 
     <flow name="create-contact" doc:name="CREATE: Contact">
-        <try doc:name="TRY: Validate Contact">
+		<try doc:name="TRY: Validate Contact">
             <flow-ref name="validate-contact" doc:name="INVOKE: Validate Contact" />
             <error-handler ref="error-handlers__handle-validation-failures" />
         </try>
         <try doc:name="TRY: Create Contact in Salesforce">
-            <set-variable variableName="contactId" value="#[import uuid7 from dataweave::util::Id --- uuid7()]" />
-            <salesforce:query config-ref="SalesforceConfig" doc:name="QUERY: Lookup Supplier by UUID">
-                <salesforce:salesforce-query>SELECT Id FROM Supplier__c WHERE UUID__c = ':supplierUuid' LIMIT 1</salesforce:salesforce-query>
-                <salesforce:parameters>#[{supplierUuid: vars.id}]</salesforce:parameters>
+            <set-variable variableName="contactId" value="#[import uuid7 from dataweave::util::Id --- uuid7()]" doc:name="SET: contactId "/>
+            <salesforce:query config-ref="SalesforceConfig" doc:name="QUERY: Lookup Supplier by UUID" target="supplierLookupResponse">
+                <salesforce:salesforce-query><![CDATA[SELECT Id FROM Supplier__c WHERE UUID__c = ':supplierUUID' LIMIT 1]]></salesforce:salesforce-query>
+                <salesforce:parameters><![CDATA[#[{supplierUUID: vars.id}]]]></salesforce:parameters>
             </salesforce:query>
 <choice doc:name="CHECK: Supplier Exists">
-                <when expression="#[sizeOf(payload) > 0]">
-                    <set-variable variableName="supplierSfId" value="#[payload[0].Id]" />
+                <when expression="#[sizeOf(vars.supplierLookupResponse) &gt; 0 and vars.supplierLookupResponse[0].Id != null]">
+                    <set-variable variableName="supplierId" value="#[vars.supplierLookupResponse[0].Id]" doc:name="SET: supplierId"/>
                 </when>
                 <otherwise>
                     <raise-error doc:name="RAISE: Supplier Not Found" type="VALIDATION_FAILURE:RESOURCE_NOT_FOUND" description="Supplier not found" />
                 </otherwise>
             </choice>
-            <salesforce:create config-ref="SalesforceConfig" doc:name="CREATE: Contact in Salesforce" type="Contact">
-                <salesforce:records>#[[{
+			<salesforce:create config-ref="SalesforceConfig" doc:name="CREATE: Contact in Salesforce" type="Contact" target="createContactResponse">
+                <salesforce:records><![CDATA[#[[{
                     UUID__c: vars.contactId,
-                    Supplier__c: vars.supplierSfId,
-                    LastName: payload.name,
+                    Supplier__c: vars.supplierId,
+                    FirstName__c: payload.firstName,
+                    LastName: payload.lastName,
+                    (Pronouns: payload.pronouns) if (payload.pronouns != null),
                     (Email: payload.email) if (payload.email != null),
                     (Phone: payload.phone) if (payload.phone != null),
-                    (Title: payload.title) if (payload.title != null)
-                }]]</salesforce:records>
+                    (Title: payload.title) if (payload.title != null),
+                    (Department: payload.department) if (payload.department != null),
+                    (Description: payload.description) if (payload.description != null)
+                }]]]]></salesforce:records>
             </salesforce:create>
-            <logger level="INFO" message="#[%dw 2.0 import toString from dw::util::Coercions --- &quot;[$(toString(now()))] Contact created: $(write(payload, 'application/json'))&quot;]" />
+			<choice doc:name="Choice" doc:id="196f6dee-c54c-4621-a013-6458e2843510" >
+				<when expression="#[vars.createContactResponse.successful == false]">
+					<logger level="INFO" message="#[%dw 2.0 import toString from dw::util::Coercions --- &quot;[$(toString(now()))] Response: $(write(vars.createContactResponse, 'application/json'))&quot;]" />
+					<raise-error doc:name="RAISE: Salesforce Error" doc:id="a8c6a8b1-1216-4e74-86b7-8bef414ea5b3" type="VALIDATION_FAILURE:SALESFORCE"/>
+				</when>
+			</choice>
             <error-handler ref="error-handlers__handle-salesforce-failures" />
         </try>
         <ee:transform doc:name="SET: 201 Created Response">
@@ -74,10 +83,10 @@ output application/json
     <flow name="find-contact-by-id" doc:name="GET: Contact By Id">
         <try doc:name="TRY: Query Contact by UUID">
             <salesforce:query config-ref="SalesforceConfig" doc:name="QUERY: Contact by UUID">
-                <salesforce:salesforce-query>SELECT UUID__c, Name, Email, Phone, Title FROM Contact WHERE UUID__c = ':contactUuid' LIMIT 1</salesforce:salesforce-query>
-                <salesforce:parameters>#[{contactUuid: vars.id}]</salesforce:parameters>
+                <salesforce:salesforce-query><![CDATA[SELECT UUID__c, CreatedDate, LastModifiedDate, Salutation, FirstName__c, LastName, Pronouns, Email, Phone, Title, Department, Description FROM Contact WHERE UUID__c = ':contactUUID' LIMIT 1]]></salesforce:salesforce-query>
+                <salesforce:parameters><![CDATA[#[{contactUUID: vars.id}]]]></salesforce:parameters>
             </salesforce:query>
-            <logger level="INFO" message="#[%dw 2.0 import toString from dw::util::Coercions --- &quot;Raw Query Result: $(write(payload, 'application/json'))&quot;]" />
+            <logger level="INFO" message="#[%dw 2.0 import toString from dw::util::Coercions --- &quot;Raw Query Result: $(write(payload, 'application/json'))&quot;]" doc:name="INFO: Log Raw Result"/>
             <error-handler ref="error-handlers__handle-salesforce-failures" />
         </try>
         <ee:transform doc:name="SET: Contact or 404 Response">
@@ -92,10 +101,16 @@ if (sizeOf(payload) == 0)
 else
 {
     id: item.UUID__c,
-    name: item.Name,
+    salutation: item.Salutation__c,
+    firstName: item.FirstName__c,
+    lastName: item.LastName,
     email: item.Email,
     phone: item.Phone,
-    title: item.Title
+    title: item.Title,
+    department: item.Department,
+    description: item.Description,
+    createdAt: item.CreatedDate,
+    modifiedAt: item.LastModifiedDate 
 }]]></ee:set-payload>
             </ee:message>
             <ee:variables>
