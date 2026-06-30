@@ -246,7 +246,7 @@ output application/json
                 <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
             </ee:variables>
         </ee:transform>
-        <!-- [STUDIO:"Flow Reference"]<flow-ref name="find-facility-by-id" /> [STUDIO] -->
+        <flow-ref name="find-facility-by-id" doc:name="INVOKE: Get Facility By Id"/>
     </flow>
     <flow name="get:\suppliers\(id)\pricebooks\template:main-config" doc:name="GET: Get Pricebook Template">
         <ee:transform doc:name="SET: id">

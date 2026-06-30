@@ -139,13 +139,13 @@ output application/json
         <error-handler ref="error-handlers__handle-validation-failures" />
     </flow>
 
-    <!-- [STUDIO:"find-facility-by-id"]<flow name="find-facility-by-id" doc:name="GET: Facility By Id">
+    <flow name="find-facility-by-id" doc:name="GET: Facility By Id">
         <try doc:name="TRY: Query Facility by UUID">
             <salesforce:query config-ref="SalesforceConfig" doc:name="QUERY: Facility by UUID" target="facilityQueryResponse">
-                <salesforce:salesforce-query><![CDATA[SELECT UUID__c, Name, Type__c, isActive__c, AvgLeadTimeInDays__c, Address__r.UUID__c, Address__r.StreetAddress__c, Address__r.City__c, Address__r.State__c, Address__r.PostalCode__c, Address__r.Country__c FROM Facility__c WHERE UUID__c = ':facilityUUID' LIMIT 1&#93;&#93;></salesforce:salesforce-query>
-                <salesforce:parameters><![CDATA[#[{facilityUUID: vars.id}&#93;&#93;&#93;></salesforce:parameters>
+                <salesforce:salesforce-query><![CDATA[SELECT UUID__c, Name, Type__c, isActive__c, AvgLeadTimeInDays__c, (SELECT Street__c, City__c, State__c, Country__c, PostalCode__c FROM SupplierAddress__r) FROM Facility__c WHERE UUID__c = ':facilityUUID' LIMIT 1]]></salesforce:salesforce-query>
+                <salesforce:parameters><![CDATA[#[{facilityUUID: vars.id}]]]></salesforce:parameters>
             </salesforce:query>
-            <logger level="INFO" doc:name="LOG: Raw Query Result" message="#[%dw 2.0 import toString from dw::util::Coercions &#45;&#45;- &quot;[$(toString(now()))&#93; Raw Query Result: $(write(vars.facilityQueryResponse, 'application/json'))&quot;&#93;" />
+            <logger level="INFO" doc:name="LOG: Raw Query Result" message="#[%dw 2.0 import toString from dw::util::Coercions --- &quot;[$(toString(now()))] Raw Query Result: $(write(vars.facilityQueryResponse, 'application/json'))&quot;]" />
             <error-handler ref="error-handlers__handle-salesforce-failures" />
         </try>
         <ee:transform doc:name="SET: Facility or 404 Response">
@@ -153,8 +153,8 @@ output application/json
                 <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 
-var item = vars.facilityQueryResponse[0&#93;
-&#45;&#45;-
+var item = vars.facilityQueryResponse[0]
+---
 if (sizeOf(vars.facilityQueryResponse) == 0)
     {message: "Resource not found"}
 else
@@ -165,22 +165,22 @@ else
     avgLeadTimeInDays: item.AvgLeadTimeInDays__c,
     isActive: item.isActive__c,
     address: {
-        streetAddress: item.Address__r.StreetAddress__c,
-        city: item.Address__r.City__c,
-        state: item.Address__r.State__c,
-        postalCode: item.Address__r.PostalCode__c,
-        country: item.Address__r.Country__c
+        street: item.SupplierAddress__r.Street__c[0],
+        city: item.SupplierAddress__r.City__c[0],
+        state: item.SupplierAddress__r.State__c[0],
+        postalCode: item.SupplierAddress__r.PostalCode__c[0],
+        country: item.SupplierAddress__r.Country__c[0]
     }
-}&#93;&#93;></ee:set-payload>
+}]]></ee:set-payload>
             </ee:message>
             <ee:variables>
                 <ee:set-variable variableName="httpStatus"><![CDATA[%dw 2.0
 output application/java
-&#45;&#45;-
-if (sizeOf(vars.facilityQueryResponse) == 0) 404 else 200&#93;&#93;></ee:set-variable>
+---
+if (sizeOf(vars.facilityQueryResponse) == 0) 404 else 200]]></ee:set-variable>
             </ee:variables>
         </ee:transform>
-    </flow> [STUDIO] -->
+    </flow>
 
     <!-- [STUDIO:"update-facility"]<flow name="update-facility" doc:name="UPDATE: Facility">
         <try doc:name="TRY: Validate Facility">
