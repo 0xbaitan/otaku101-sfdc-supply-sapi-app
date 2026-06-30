@@ -23,4 +23,5 @@
       </types:input-event>
     </types:processor-declaration>
   </types:enrichment>
+  <types:enrichment select="#ea12fd51-6ea6-4e6b-9937-388344300947"/>
 </types:mule>

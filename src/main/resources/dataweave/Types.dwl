@@ -45,22 +45,36 @@ type UpdateContact = {
     title?: String
 }
 
+type AddressInfo = {
+    streetAddress: String,
+    city: String,
+    state: String,
+    postalCode: String,
+    country: String
+}
+
 type Facility = {
     name: String,
-    facilityType?: "Warehouse" | "Manufacturing" | "Distribution" | "Office",
-    status?: "Active" | "Inactive" | "Under Maintenance"
+    facilityType: "Warehouse" | "Manufacturing" | "Distribution" | "Office",
+    address: AddressInfo,
+    avgLeadTimeInDays?: Number,
+    isActive?: Boolean
 }
 
 type CreateFacilityRequest = {
     name: String,
-    facilityType?: "Warehouse" | "Manufacturing" | "Distribution" | "Office",
-    status?: "Active" | "Inactive" | "Under Maintenance"
+    facilityType: "Warehouse" | "Manufacturing" | "Distribution" | "Office",
+    address: String,
+    avgLeadTimeInDays?: Number,
+    isActive?: Boolean
 }
 
-type UpdateFacility = {
+type UpdateFacilityRequest = {
     name?: String,
     facilityType?: "Warehouse" | "Manufacturing" | "Distribution" | "Office",
-    status?: "Active" | "Inactive" | "Under Maintenance"
+    address?: String,
+    avgLeadTimeInDays?: Number,
+    isActive?: Boolean
 }
 
 type ProductCategory = {

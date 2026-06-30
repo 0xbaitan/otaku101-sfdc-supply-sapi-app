@@ -3,7 +3,7 @@
     <http:listener-config name="main-httpListenerConfig">
         <http:listener-connection host="0.0.0.0" port="8081" />
     </http:listener-config>
-    <apikit:config name="main-config" api="resource::365d8e9a-5b53-4d65-8776-8d29047c4ac6:otaku101-sfdc-supply-sapi:1.0.3:raml:zip:main.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+    <apikit:config name="main-config" api="resource::365d8e9a-5b53-4d65-8776-8d29047c4ac6:otaku101-sfdc-supply-sapi:1.0.5:raml:zip:main.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
     <salesforce-composite:composite-config name="SalesforceCompositeConfig" doc:name="Salesforce Composite Config" doc:id="2412b199-01d3-4e7e-b384-e3ea3b8471eb">
         <salesforce-composite:config-with-oauth-connection>
             <salesforce-composite:oauth-authorization-code consumerKey="${sf.client_id}" consumerSecret="${secure::sf.client_secret}" />
@@ -158,7 +158,7 @@ output application/json
                 <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
             </ee:variables>
         </ee:transform>
-        <flow-ref name="replace-inventory" />
+        <!-- [STUDIO:"Flow Reference"]<flow-ref name="replace-inventory" /> [STUDIO] -->
     </flow>
     <flow name="delete:\contacts\(id):main-config" doc:name="DELETE: Delete Contact">
         <ee:transform doc:name="SET: id">
@@ -190,7 +190,7 @@ output application/json
                 <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
             </ee:variables>
         </ee:transform>
-        <flow-ref name="update-facility" />
+        <!-- [STUDIO:"Flow Reference"]<flow-ref name="update-facility" /> [STUDIO] -->
     </flow>
     <flow name="patch:\products\(id):application\json:main-config" doc:name="PATCH: Update Product">
         <ee:transform doc:name="SET: id">
@@ -238,7 +238,7 @@ output application/json
                 <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
             </ee:variables>
         </ee:transform>
-        <flow-ref name="query-facilities-by-supplier" />
+        <!-- [STUDIO:"Flow Reference"]<flow-ref name="query-facilities-by-supplier" /> [STUDIO] -->
     </flow>
     <flow name="get:\facilities\(id):main-config" doc:name="GET: Get Facility By Id">
         <ee:transform doc:name="SET: id">
@@ -246,7 +246,7 @@ output application/json
                 <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
             </ee:variables>
         </ee:transform>
-        <flow-ref name="find-facility-by-id" />
+        <!-- [STUDIO:"Flow Reference"]<flow-ref name="find-facility-by-id" /> [STUDIO] -->
     </flow>
     <flow name="get:\suppliers\(id)\pricebooks\template:main-config" doc:name="GET: Get Pricebook Template">
         <ee:transform doc:name="SET: id">

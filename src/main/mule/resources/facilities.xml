@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:java="http://www.mulesoft.org/schema/mule/java"
+<mule xmlns:salesforce-composite="http://www.mulesoft.org/schema/mule/salesforce-composite"
+    xmlns:java="http://www.mulesoft.org/schema/mule/java"
     xmlns:validation="http://www.mulesoft.org/schema/mule/validation"
     xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
     xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
@@ -10,48 +11,116 @@
     xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
 http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/salesforce-composite http://www.mulesoft.org/schema/mule/salesforce-composite/current/mule-salesforce-composite.xsd
 http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
 http://www.mulesoft.org/schema/mule/java http://www.mulesoft.org/schema/mule/java/current/mule-java.xsd">
 
     <sub-flow name="validate-facility" doc:name="VALIDATE: Facility">
-        <choice doc:name="CHECK: Named Not Blank">
+        <choice doc:name="CHECK: Name Not Blank">
             <when expression="#[payload.name?]">
                 <validation:is-not-blank-string value="#[payload.name]" message="Facility name cannot be blank.">
                     <error-mapping sourceType="VALIDATION:BLANK_STRING" targetType="VALIDATION_FAILURE:BLANK_NAME" />
                 </validation:is-not-blank-string>
             </when>
         </choice>
+        <choice doc:name="CHECK: Facility Type Valid">
+            <when expression="#[payload.facilityType?]">
+                <validation:is-true expression="#[payload.facilityType is String and ['Warehouse', 'Manufacturing', 'Distribution', 'Office'] contains payload.facilityType]" message="Facility type must be one of: Warehouse, Manufacturing, Distribution, Office.">
+                    <error-mapping sourceType="VALIDATION:INVALID_BOOLEAN" targetType="VALIDATION_FAILURE:INVALID_FIELD" />
+                </validation:is-true>
+            </when>
+        </choice>
+        <choice doc:name="CHECK: Avg Lead Time Valid">
+            <when expression="#[payload.avgLeadTimeInDays?]">
+                <validation:is-true expression="#[payload.avgLeadTimeInDays is Number and payload.avgLeadTimeInDays >= 1]" message="Average lead time must be a number >= 1.">
+                    <error-mapping sourceType="VALIDATION:INVALID_BOOLEAN" targetType="VALIDATION_FAILURE:INVALID_FIELD" />
+                </validation:is-true>
+            </when>
+        </choice>
+        <choice doc:name="CHECK: Is Active Valid">
+            <when expression="#[payload.isActive?]">
+                <validation:is-true expression="#[payload.isActive is Boolean]" message="isActive must be a boolean.">
+                    <error-mapping sourceType="VALIDATION:INVALID_BOOLEAN" targetType="VALIDATION_FAILURE:INVALID_FIELD" />
+                </validation:is-true>
+            </when>
+        </choice>
+        <choice doc:name="CHECK: Address Valid UUID">
+            <when expression="#[payload.address?]">
+                <validation:is-true expression="#[payload.address matches /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/]" message="Address must be a valid UUID.">
+                    <error-mapping sourceType="VALIDATION:INVALID_BOOLEAN" targetType="VALIDATION_FAILURE:INVALID_FIELD" />
+                </validation:is-true>
+            </when>
+        </choice>
     </sub-flow>
 
     <flow name="create-facility" doc:name="CREATE: Facility">
-        <try doc:name="TRY: Validate Facility">
-            <flow-ref name="validate-facility" doc:name="INVOKE: Validate Facility" />
-            <error-handler ref="error-handlers__handle-validation-failures" />
-        </try>
         <try doc:name="TRY: Create Facility in Salesforce">
-            <set-variable variableName="facilityId" value="#[import uuid7 from dataweave::util::Id --- uuid7()]" />
-            <salesforce:query config-ref="SalesforceConfig" doc:name="QUERY: Lookup Supplier by UUID">
-                <salesforce:salesforce-query>SELECT Id FROM Supplier__c WHERE UUID__c = ':supplierUuid' LIMIT 1</salesforce:salesforce-query>
-                <salesforce:parameters>#[{supplierUuid: vars.id}]</salesforce:parameters>
-            </salesforce:query>
-            <choice doc:name="CHECK: Supplier Exists">
-                <when expression="#[sizeOf(payload) > 0]">
-                    <set-variable variableName="supplierSfId" value="#[payload[0].Id]" />
+            <ee:transform doc:name="SET/CREATE: UUIDs for Supplier, Address and Facility" doc:id="ea12fd51-6ea6-4e6b-9937-388344300947" >
+				<ee:message >
+				</ee:message>
+				<ee:variables >
+					<ee:set-variable variableName="facilityUuid" ><![CDATA[import uuid7 from dataweave::util::Id --- uuid7()]]></ee:set-variable>
+					<ee:set-variable variableName="addressUuid" ><![CDATA[import uuid7 from dataweave::util::Id --- uuid7()]]></ee:set-variable>
+					<ee:set-variable variableName="supplierUuid" ><![CDATA[%dw 2.0
+output application/java
+---
+vars.id]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+			<salesforce-composite:execute-composite-request doc:name="CREATE: Facility with Address" doc:id="93b8f258-7715-4ed5-8de1-1f2c60cf6ae2" config-ref="SalesforceCompositeConfig" target="createFacilityResult">
+				<salesforce-composite:request-body ><![CDATA[#[%dw 2.0
+output application/json
+var apiVersion = "v66.0"
+---
+{
+	allOrNone: true,
+	compositeRequest: [
+		{
+			referenceId: "supplierLookup",
+			method: "GET",
+			url: "/services/data/$(apiVersion)/query?q=SELECT+Id+FROM+Supplier__c+WHERE+UUID__c='$(vars.supplierUuid)'+LIMIT+1"
+		},
+		{
+			referenceId: "createFacility",
+			method: "POST",
+			url: "/services/data/$(apiVersion)/sobjects/Facility__c",
+			body: {
+				UUID__c: vars.facilityUuid,
+				Supplier__c: "@{supplierLookup.records[0].Id}",
+				Name: payload.name,
+				Type__c: payload.facilityType,
+				(AvgLeadTimeInDays__c: payload.avgLeadTimeInDays as Number) if (payload.avgLeadTimeInDays != null),
+				(isActive__c: payload.isActive as Boolean) if (payload.isActive != null)
+			}
+		},
+		{
+			referenceId: "createAddress",
+			method: "POST",
+			url: "/services/data/$(apiVersion)/sobjects/SupplierAddress__c",
+			body: {
+				UUID__c: vars.addressUuid,
+				Street__c: payload.address.street,
+				City__c: payload.address.city,
+				State__c: payload.address.state,
+				PostalCode__c: payload.address.postalCode,
+				Country__c: payload.address.country,
+				Facility__c: "@{createFacility.id}",
+			}
+		},
+		
+	]
+}]]]></salesforce-composite:request-body>
+			</salesforce-composite:execute-composite-request>
+            <choice doc:name="CHECK: Composite Succeeded">
+                <when expression="#[%dw 2.0&#10;import every from dw::core::Arrays&#10;---&#10;vars.createFacilityResult.compositeResponse every ($.httpStatusCode &gt;= 400)]">
+                    <logger level="ERROR" doc:name="ERROR: Composite Failure" message="#[%dw 2.0 import toString from dw::util::Coercions --- &quot;[$(toString(now()))] Composite create-facility failed: $(write(vars.createFacilityResult, 'application/json'))&quot;]" />
+                    <raise-error doc:name="RAISE: Salesforce Error" type="VALIDATION_FAILURE:SALESFORCE" description="Failed to create facility in Salesforce." />
                 </when>
-                <otherwise>
-                    <raise-error doc:name="RAISE: Supplier Not Found" type="VALIDATION_FAILURE:RESOURCE_NOT_FOUND" description="Supplier not found" />
-                </otherwise>
-            </choice>
-            <salesforce:create config-ref="SalesforceConfig" doc:name="CREATE: Facility in Salesforce" type="Facility__c">
-                <salesforce:records>#[[{
-                    UUID__c: vars.facilityId,
-                    Supplier__c: vars.supplierSfId,
-                    Name: payload.name,
-                    (Type__c: payload.facilityType) if (payload.facilityType != null),
-                    (Status__c: payload.status) if (payload.status != null)
-                }]]</salesforce:records>
-            </salesforce:create>
-            <logger level="INFO" message="#[%dw 2.0 import toString from dw::util::Coercions --- &quot;[$(toString(now()))] Facility created: $(write(payload, 'application/json'))&quot;]" />
+				<otherwise >
+					<logger level="INFO" doc:name="INFO: Facility Created" message='#[%dw 2.0 import toString from dw::util::Coercions --- "[$(toString(now()))] Facility created: $(vars.facilityUuid)"]' />
+				</otherwise>
+            
+</choice>
             <error-handler ref="error-handlers__handle-salesforce-failures" />
         </try>
         <ee:transform doc:name="SET: 201 Created Response">
@@ -60,23 +129,23 @@ http://www.mulesoft.org/schema/mule/java http://www.mulesoft.org/schema/mule/jav
 output application/json
 ---
 {
-    id: vars.facilityId
+    id: vars.facilityUuid
 }]]></ee:set-payload>
             </ee:message>
             <ee:variables>
-                <ee:set-variable variableName="httpStatus">201</ee:set-variable>
+                <ee:set-variable variableName="httpStatus"><![CDATA[201]]></ee:set-variable>
             </ee:variables>
         </ee:transform>
         <error-handler ref="error-handlers__handle-validation-failures" />
     </flow>
 
-    <flow name="find-facility-by-id" doc:name="GET: Facility By Id">
+    <!-- [STUDIO:"find-facility-by-id"]<flow name="find-facility-by-id" doc:name="GET: Facility By Id">
         <try doc:name="TRY: Query Facility by UUID">
-            <salesforce:query config-ref="SalesforceConfig" doc:name="QUERY: Facility by UUID">
-                <salesforce:salesforce-query>SELECT UUID__c, Name, Type__c, Status__c FROM Facility__c WHERE UUID__c = ':facilityUuid' LIMIT 1</salesforce:salesforce-query>
-                <salesforce:parameters>#[{facilityUuid: vars.id}]</salesforce:parameters>
+            <salesforce:query config-ref="SalesforceConfig" doc:name="QUERY: Facility by UUID" target="facilityQueryResponse">
+                <salesforce:salesforce-query><![CDATA[SELECT UUID__c, Name, Type__c, isActive__c, AvgLeadTimeInDays__c, Address__r.UUID__c, Address__r.StreetAddress__c, Address__r.City__c, Address__r.State__c, Address__r.PostalCode__c, Address__r.Country__c FROM Facility__c WHERE UUID__c = ':facilityUUID' LIMIT 1&#93;&#93;></salesforce:salesforce-query>
+                <salesforce:parameters><![CDATA[#[{facilityUUID: vars.id}&#93;&#93;&#93;></salesforce:parameters>
             </salesforce:query>
-            <logger level="INFO" message="#[%dw 2.0 import toString from dw::util::Coercions --- &quot;Raw Query Result: $(write(payload, 'application/json'))&quot;]" />
+            <logger level="INFO" doc:name="LOG: Raw Query Result" message="#[%dw 2.0 import toString from dw::util::Coercions &#45;&#45;- &quot;[$(toString(now()))&#93; Raw Query Result: $(write(vars.facilityQueryResponse, 'application/json'))&quot;&#93;" />
             <error-handler ref="error-handlers__handle-salesforce-failures" />
         </try>
         <ee:transform doc:name="SET: Facility or 404 Response">
@@ -84,71 +153,102 @@ output application/json
                 <ee:set-payload><![CDATA[%dw 2.0
 output application/json
 
-var item = payload[0]
----
-if (sizeOf(payload) == 0)
+var item = vars.facilityQueryResponse[0&#93;
+&#45;&#45;-
+if (sizeOf(vars.facilityQueryResponse) == 0)
     {message: "Resource not found"}
 else
 {
     id: item.UUID__c,
     name: item.Name,
-    "type": item.Type__c,
-    status: item.Status__c
-}]]></ee:set-payload>
+    facilityType: item.Type__c,
+    avgLeadTimeInDays: item.AvgLeadTimeInDays__c,
+    isActive: item.isActive__c,
+    address: {
+        streetAddress: item.Address__r.StreetAddress__c,
+        city: item.Address__r.City__c,
+        state: item.Address__r.State__c,
+        postalCode: item.Address__r.PostalCode__c,
+        country: item.Address__r.Country__c
+    }
+}&#93;&#93;></ee:set-payload>
             </ee:message>
             <ee:variables>
                 <ee:set-variable variableName="httpStatus"><![CDATA[%dw 2.0
 output application/java
----
-if (sizeOf(payload) == 0) 404 else 200]]></ee:set-variable>
+&#45;&#45;-
+if (sizeOf(vars.facilityQueryResponse) == 0) 404 else 200&#93;&#93;></ee:set-variable>
             </ee:variables>
         </ee:transform>
-    </flow>
+    </flow> [STUDIO] -->
 
-    <flow name="update-facility" doc:name="UPDATE: Facility">
+    <!-- [STUDIO:"update-facility"]<flow name="update-facility" doc:name="UPDATE: Facility">
         <try doc:name="TRY: Validate Facility">
             <flow-ref name="validate-facility" doc:name="INVOKE: Validate Facility" />
             <error-handler ref="error-handlers__handle-validation-failures" />
         </try>
         <try doc:name="TRY: Update Facility in Salesforce">
-            <salesforce:upsert config-ref="SalesforceConfig" doc:name="UPSERT: Facility by UUID" externalIdFieldName="UUID__c" objectType="Facility__c">
+            <choice doc:name="CHECK: Address Provided">
+                <when expression="#[payload.address?&#93;">
+                    <salesforce:query config-ref="SalesforceConfig" doc:name="QUERY: Lookup Address by UUID" target="addressLookupResponse">
+                        <salesforce:salesforce-query><![CDATA[SELECT Id FROM Address__c WHERE UUID__c = ':addressUUID' LIMIT 1&#93;&#93;></salesforce:salesforce-query>
+                        <salesforce:parameters><![CDATA[#[{addressUUID: payload.address}&#93;&#93;&#93;></salesforce:parameters>
+                    </salesforce:query>
+                    <choice doc:name="CHECK: Address Exists">
+                        <when expression="#[sizeOf(vars.addressLookupResponse) > 0&#93;">
+                            <set-variable variableName="addressSfId" value="#[vars.addressLookupResponse[0&#93;.Id&#93;" doc:name="SET: addressSfId" />
+                        </when>
+                        <otherwise>
+                            <raise-error doc:name="RAISE: Address Not Found" type="VALIDATION_FAILURE:RESOURCE_NOT_FOUND" description="Address not found." />
+                        </otherwise>
+                    </choice>
+                </when>
+            </choice>
+            <salesforce:upsert config-ref="SalesforceConfig" doc:name="UPSERT: Facility by UUID" externalIdFieldName="UUID__c" objectType="Facility__c" target="updateFacilityResponse">
                 <salesforce:records><![CDATA[#[[{
                     UUID__c: vars.id,
                     (Name: payload.name) if (payload.name?),
                     (Type__c: payload.facilityType) if (payload.facilityType != null),
-                    (Status__c: payload.status) if (payload.status != null)
-                }]]]]></salesforce:records>
+                    (isActive__c: payload.isActive as Boolean) if (payload.isActive != null),
+                    (AvgLeadTimeInDays__c: payload.avgLeadTimeInDays as Number) if (payload.avgLeadTimeInDays != null),
+                    (Address__c: vars.addressSfId) if (vars.addressSfId != null)
+                }&#93;&#93;&#93;&#93;></salesforce:records>
             </salesforce:upsert>
-            <logger level="INFO" message="#[&quot;Raw results: $(write(payload, 'application/json'))&quot;]" />
+            <choice doc:name="CHECK: Update Succeeded">
+                <when expression="#[vars.updateFacilityResponse.successful == false&#93;">
+                    <raise-error doc:name="RAISE: Salesforce Error" type="VALIDATION_FAILURE:SALESFORCE" description="Failed to update facility in Salesforce." />
+                </when>
+            </choice>
+            <logger level="INFO" doc:name="LOG: Facility Updated" message="#[%dw 2.0 import toString from dw::util::Coercions &#45;&#45;- &quot;[$(toString(now()))&#93; Facility updated: $(vars.id)&quot;&#93;" />
             <error-handler ref="error-handlers__handle-salesforce-failures" />
         </try>
         <ee:transform doc:name="PASS: Updated Facility">
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
 output application/json
----
-payload]]></ee:set-payload>
+&#45;&#45;-
+payload&#93;&#93;></ee:set-payload>
             </ee:message>
         </ee:transform>
         <error-handler ref="error-handlers__handle-validation-failures" />
-    </flow>
+    </flow> [STUDIO] -->
 
-    <flow name="query-facilities-by-supplier" doc:name="GET: Query Facilities By Supplier">
+    <!-- [STUDIO:"query-facilities-by-supplier"]<flow name="query-facilities-by-supplier" doc:name="GET: Query Facilities By Supplier">
         <try doc:name="TRY: Query Paginated Facilities">
             <ee:transform doc:name="SET: Pagination Params">
                 <ee:variables>
                     <ee:set-variable variableName="pageSize"><![CDATA[%dw 2.0
 output application/java
----
-(attributes.queryParams.limit default 25) as Number]]></ee:set-variable>
+&#45;&#45;-
+(attributes.queryParams.limit default 25) as Number&#93;&#93;></ee:set-variable>
                     <ee:set-variable variableName="afterCursor"><![CDATA[%dw 2.0
 output application/java
----
-attributes.queryParams.after]]></ee:set-variable>
+&#45;&#45;-
+attributes.queryParams.after&#93;&#93;></ee:set-variable>
                     <ee:set-variable variableName="beforeCursor"><![CDATA[%dw 2.0
 output application/java
----
-attributes.queryParams.before]]></ee:set-variable>
+&#45;&#45;-
+attributes.queryParams.before&#93;&#93;></ee:set-variable>
                 </ee:variables>
             </ee:transform>
             <ee:transform doc:name="BUILD: Cursor SOQL Query">
@@ -160,20 +260,20 @@ output application/java
 var safeSupplierId = if (Pagination::isValidUuid(vars.id)) vars.id else ""
 var safeBefore = if (vars.beforeCursor != null and Pagination::isValidUuid(vars.beforeCursor)) vars.beforeCursor else null
 var safeAfter = if (vars.afterCursor != null and Pagination::isValidUuid(vars.afterCursor)) vars.afterCursor else null
-var baseQuery = "SELECT UUID__c, Name, Type__c, Status__c FROM Facility__c WHERE Supplier__r.UUID__c = '" ++ safeSupplierId ++ "'"
----
+var baseQuery = "SELECT UUID__c, Name, Type__c, isActive__c, AvgLeadTimeInDays__c, Address__r.UUID__c, Address__r.StreetAddress__c, Address__r.City__c, Address__r.State__c, Address__r.PostalCode__c, Address__r.Country__c FROM Facility__c WHERE Supplier__r.UUID__c = '" ++ safeSupplierId ++ "'"
+&#45;&#45;-
 if (safeBefore != null)
     baseQuery ++ " AND UUID__c < '" ++ safeBefore ++ "' ORDER BY UUID__c DESC LIMIT " ++ (vars.pageSize + 1)
 else if (safeAfter != null)
     baseQuery ++ " AND UUID__c > '" ++ safeAfter ++ "' ORDER BY UUID__c ASC LIMIT " ++ (vars.pageSize + 1)
 else
-    baseQuery ++ " ORDER BY UUID__c ASC LIMIT " ++ (vars.pageSize + 1)]]></ee:set-variable>
+    baseQuery ++ " ORDER BY UUID__c ASC LIMIT " ++ (vars.pageSize + 1)&#93;&#93;></ee:set-variable>
                 </ee:variables>
             </ee:transform>
             <salesforce:query config-ref="SalesforceConfig" doc:name="QUERY: Paginated Facilities">
-                <salesforce:salesforce-query>#[vars.soql]</salesforce:salesforce-query>
+                <salesforce:salesforce-query>#[vars.soql&#93;</salesforce:salesforce-query>
             </salesforce:query>
-            <logger level="INFO" message="#[%dw 2.0 import toString from dw::util::Coercions --- &quot;Raw Query Result: $(write(payload, 'application/json'))&quot;]" />
+            <logger level="INFO" doc:name="LOG: Raw Query Result" message="#[%dw 2.0 import toString from dw::util::Coercions &#45;&#45;- &quot;[$(toString(now()))&#93; Raw Query Result: $(write(payload, 'application/json'))&quot;&#93;" />
             <ee:transform doc:name="MAP: Paginated Facilities">
                 <ee:message>
                     <ee:set-payload><![CDATA[%dw 2.0
@@ -181,7 +281,7 @@ import dataweave::util::Pagination
 output application/json
 
 var result = Pagination::paginate(payload, vars.pageSize, vars.afterCursor, vars.beforeCursor)
----
+&#45;&#45;-
 {
     paging: {
         cursors: {
@@ -195,74 +295,123 @@ var result = Pagination::paginate(payload, vars.pageSize, vars.afterCursor, vars
     results: result.data map {
         id: $.UUID__c,
         name: $.Name,
-        "type": $.Type__c,
-        status: $.Status__c
+        facilityType: $.Type__c,
+        avgLeadTimeInDays: $.AvgLeadTimeInDays__c,
+        isActive: $.isActive__c,
+        address: {
+            streetAddress: $.Address__r.StreetAddress__c,
+            city: $.Address__r.City__c,
+            state: $.Address__r.State__c,
+            postalCode: $.Address__r.PostalCode__c,
+            country: $.Address__r.Country__c
+        }
     }
-}]]></ee:set-payload>
+}&#93;&#93;></ee:set-payload>
                 </ee:message>
                 <ee:variables>
-                    <ee:set-variable variableName="httpStatus"><![CDATA[200]]></ee:set-variable>
+                    <ee:set-variable variableName="httpStatus"><![CDATA[200&#93;&#93;></ee:set-variable>
                 </ee:variables>
             </ee:transform>
             <error-handler ref="error-handlers__handle-salesforce-failures" />
         </try>
-    </flow>
+    </flow> [STUDIO] -->
 
-    <flow name="replace-inventory" doc:name="PUT: Replace Inventory">
+    <!-- [STUDIO:"replace-inventory"]<flow name="replace-inventory" doc:name="PUT: Replace Inventory">
         <try doc:name="TRY: Replace Inventory">
             <ee:transform doc:name="PARSE: XLSX Inventory Rows">
                 <ee:variables>
                     <ee:set-variable variableName="inventoryRows"><![CDATA[%dw 2.0
 import * from dw::core::Binaries
 output application/java
----
-read(fromBase64(payload.file), "application/xlsx")]]></ee:set-variable>
+&#45;&#45;-
+read(fromBase64(payload.file), "application/xlsx")&#93;&#93;></ee:set-variable>
                 </ee:variables>
             </ee:transform>
-            <salesforce:query config-ref="SalesforceConfig" doc:name="QUERY: Lookup Facility by UUID">
-                <salesforce:salesforce-query>SELECT Id FROM Facility__c WHERE UUID__c = ':facilityUuid' LIMIT 1</salesforce:salesforce-query>
-                <salesforce:parameters>#[{facilityUuid: vars.id}]</salesforce:parameters>
-            </salesforce:query>
+            <salesforce-composite:composite config-ref="SalesforceCompositeConfig" doc:name="COMPOSITE: Lookup Facility & Existing Inventory" target="inventoryBatch1Result">
+                <salesforce-composite:sub-requests><![CDATA[%dw 2.0
+output application/java
+
+var apiVersion = "60.0"
+&#45;&#45;-
+{
+    allOrNone: true,
+    subrequests: [{
+        referenceId: "facilityLookup",
+        method: "GET",
+        url: "/services/data/v" ++ apiVersion ++ "/query?q=SELECT+Id+FROM+Facility__c+WHERE+UUID__c='" ++ vars.id ++ "'+LIMIT+1"
+    }, {
+        referenceId: "inventoryLookup",
+        method: "GET",
+        url: "/services/data/v" ++ apiVersion ++ "/query?q=SELECT+Id+FROM+Inventory__c+WHERE+Facility__r.UUID__c='" ++ vars.id ++ "'"
+    }&#93;
+}&#93;&#93;></salesforce-composite:sub-requests>
+            </salesforce-composite:composite>
+            <choice doc:name="CHECK: Composite Batch 1 Succeeded">
+                <when expression="#[vars.inventoryBatch1Result.compositeResponse any ($.httpStatusCode >= 400)&#93;">
+                    <logger level="ERROR" doc:name="LOG: Composite Batch 1 Failure" message="#[%dw 2.0 import toString from dw::util::Coercions &#45;&#45;- &quot;[$(toString(now()))&#93; Composite batch 1 failed: $(write(vars.inventoryBatch1Result, 'application/json'))&quot;&#93;" />
+                    <raise-error doc:name="RAISE: Salesforce Error" type="VALIDATION_FAILURE:SALESFORCE" description="Failed to look up facility and inventory." />
+                </when>
+            </choice>
             <choice doc:name="CHECK: Facility Exists">
-                <when expression="#[sizeOf(payload) > 0]">
-                    <set-variable variableName="facilitySfId" value="#[payload[0].Id]" />
+                <when expression="#[vars.inventoryBatch1Result.compositeResponse[0&#93;.body.totalSize > 0&#93;">
+                    <set-variable variableName="facilitySfId" value="#[vars.inventoryBatch1Result.compositeResponse[0&#93;.body.records[0&#93;.Id&#93;" doc:name="SET: facilitySfId" />
                 </when>
                 <otherwise>
-                    <raise-error doc:name="RAISE: Facility Not Found" type="VALIDATION_FAILURE:RESOURCE_NOT_FOUND" description="Facility not found" />
+                    <raise-error doc:name="RAISE: Facility Not Found" type="VALIDATION_FAILURE:RESOURCE_NOT_FOUND" description="Facility not found." />
                 </otherwise>
             </choice>
-            <salesforce:query config-ref="SalesforceConfig" doc:name="QUERY: Existing Inventory by Facility">
-                <salesforce:salesforce-query>SELECT Id FROM Inventory__c WHERE Facility__r.UUID__c = ':facilityUuid'</salesforce:salesforce-query>
-                <salesforce:parameters>#[{facilityUuid: vars.id}]</salesforce:parameters>
-            </salesforce:query>
             <choice doc:name="CHECK: Has Existing Inventory">
-                <when expression="#[sizeOf(payload) > 0]">
-                    <salesforce:delete config-ref="SalesforceConfig" doc:name="DELETE: Existing Inventory">
-                        <salesforce:ids>#[payload map $.Id]</salesforce:ids>
+                <when expression="#[vars.inventoryBatch1Result.compositeResponse[1&#93;.body.totalSize > 0&#93;">
+                    <salesforce:delete config-ref="SalesforceConfig" doc:name="DELETE: Existing Inventory" target="deleteInventoryResponse">
+                        <salesforce:ids>#[vars.inventoryBatch1Result.compositeResponse[1&#93;.body.records map $.Id&#93;</salesforce:ids>
                     </salesforce:delete>
+                    <choice doc:name="CHECK: Delete Succeeded">
+                        <when expression="#[vars.deleteInventoryResponse.successful == false&#93;">
+                            <raise-error doc:name="RAISE: Salesforce Error" type="VALIDATION_FAILURE:SALESFORCE" description="Failed to delete existing inventory." />
+                        </when>
+                    </choice>
                 </when>
             </choice>
-            <set-variable variableName="recordsCreated" value="#[0]" />
-            <foreach doc:name="FOR EACH: XLSX Row" collection="#[vars.inventoryRows]">
-                <set-variable variableName="xlsxRow" value="#[payload]" />
-                <set-variable variableName="productId" value="#[vars.xlsxRow.'Product ID']" />
-                <salesforce:query config-ref="SalesforceConfig" doc:name="QUERY: Lookup Product by UUID">
-                    <salesforce:salesforce-query>SELECT Id FROM Product__c WHERE UUID__c = ':productUuid' LIMIT 1</salesforce:salesforce-query>
-                    <salesforce:parameters>#[{productUuid: vars.productId}]</salesforce:parameters>
-                </salesforce:query>
-                <choice doc:name="CHECK: Product Exists">
-                    <when expression="#[sizeOf(payload) > 0]">
-                        <set-variable variableName="inventoryId" value="#[import uuid7 from dataweave::util::Id --- uuid7()]" />
-                        <salesforce:create config-ref="SalesforceConfig" doc:name="CREATE: Inventory Record" type="Inventory__c">
-                            <salesforce:records>#[[{
-                                UUID__c: vars.inventoryId,
-                                Facility__c: vars.facilitySfId,
-                                Product__c: payload[0].Id,
-                                Quantity__c: vars.xlsxRow.Quantity as Number
-                            }]]</salesforce:records>
-                        </salesforce:create>
-                        <set-variable variableName="recordsCreated" value="#[vars.recordsCreated + 1]" />
+            <set-variable variableName="recordsCreated" value="#[0&#93;" doc:name="SET: recordsCreated" />
+            <foreach doc:name="FOR EACH: XLSX Row" collection="#[vars.inventoryRows&#93;">
+                <set-variable variableName="xlsxRow" value="#[payload&#93;" doc:name="SET: xlsxRow" />
+                <set-variable variableName="inventoryId" value="#[import uuid7 from dataweave::util::Id &#45;&#45;- uuid7()&#93;" doc:name="SET: inventoryId" />
+                <salesforce-composite:composite config-ref="SalesforceCompositeConfig" doc:name="COMPOSITE: Lookup Product & Create Inventory" target="inventoryRowResult">
+                    <salesforce-composite:sub-requests><![CDATA[%dw 2.0
+output application/java
+
+var apiVersion = "60.0"
+&#45;&#45;-
+{
+    allOrNone: false,
+    subrequests: [{
+        referenceId: "productLookup",
+        method: "GET",
+        url: "/services/data/v" ++ apiVersion ++ "/query?q=SELECT+Id+FROM+Product__c+WHERE+UUID__c='" ++ vars.xlsxRow.'Product ID' ++ "'+LIMIT+1"
+    }, {
+        referenceId: "createInventory",
+        method: "POST",
+        url: "/services/data/v" ++ apiVersion ++ "/sobjects/Inventory__c",
+        body: {
+            UUID__c: vars.inventoryId,
+            Facility__c: vars.facilitySfId,
+            Product__c: "@{productLookup.records[0&#93;.Id}",
+            Quantity__c: vars.xlsxRow.Quantity as Number
+        }
+    }&#93;
+}&#93;&#93;></salesforce-composite:sub-requests>
+                </salesforce-composite:composite>
+                <choice doc:name="CHECK: Row Result">
+                    <when expression="#[vars.inventoryRowResult.compositeResponse[0&#93;.httpStatusCode == 200 and vars.inventoryRowResult.compositeResponse[0&#93;.body.totalSize > 0 and vars.inventoryRowResult.compositeResponse[1&#93;.httpStatusCode == 201&#93;">
+                        <logger level="INFO" doc:name="LOG: Inventory Created" message="#[%dw 2.0 import toString from dw::util::Coercions &#45;&#45;- &quot;[$(toString(now()))&#93; Inventory created for product $(vars.xlsxRow.'Product ID')&quot;&#93;" />
+                        <set-variable variableName="recordsCreated" value="#[vars.recordsCreated + 1&#93;" doc:name="INC: recordsCreated" />
                     </when>
+                    <when expression="#[vars.inventoryRowResult.compositeResponse[0&#93;.httpStatusCode == 200 and vars.inventoryRowResult.compositeResponse[0&#93;.body.totalSize == 0&#93;">
+                        <logger level="WARN" doc:name="WARN: Product Not Found" message="#[%dw 2.0 import toString from dw::util::Coercions &#45;&#45;- &quot;[$(toString(now()))&#93; Product not found: $(vars.xlsxRow.'Product ID')&quot;&#93;" />
+                    </when>
+                    <otherwise>
+                        <logger level="ERROR" doc:name="ERROR: Row Processing Failed" message="#[%dw 2.0 import toString from dw::util::Coercions &#45;&#45;- &quot;[$(toString(now()))&#93; Failed to process row: $(write(vars.inventoryRowResult, 'application/json'))&quot;&#93;" />
+                    </otherwise>
                 </choice>
             </foreach>
             <error-handler ref="error-handlers__handle-salesforce-failures" />
@@ -271,15 +420,15 @@ read(fromBase64(payload.file), "application/xlsx")]]></ee:set-variable>
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
 output application/json
----
+&#45;&#45;-
 {
     status: "ok",
     recordsCreated: vars.recordsCreated
-}]]></ee:set-payload>
+}&#93;&#93;></ee:set-payload>
             </ee:message>
             <ee:variables>
                 <ee:set-variable variableName="httpStatus">200</ee:set-variable>
             </ee:variables>
         </ee:transform>
-    </flow>
+    </flow> [STUDIO] -->
 </mule>
