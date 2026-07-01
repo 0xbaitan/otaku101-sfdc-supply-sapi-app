@@ -142,7 +142,7 @@ output application/json
     <flow name="find-facility-by-id" doc:name="GET: Facility By Id">
         <try doc:name="TRY: Query Facility by UUID">
             <salesforce:query config-ref="SalesforceConfig" doc:name="QUERY: Facility by UUID" target="facilityQueryResponse">
-                <salesforce:salesforce-query><![CDATA[SELECT UUID__c, Name, Type__c, isActive__c, AvgLeadTimeInDays__c, (SELECT Street__c, City__c, State__c, Country__c, PostalCode__c FROM SupplierAddress__r) FROM Facility__c WHERE UUID__c = ':facilityUUID' LIMIT 1]]></salesforce:salesforce-query>
+                <salesforce:salesforce-query><![CDATA[SELECT UUID__c, CreatedDate, LastModifiedDate, Name, Type__c, isActive__c, AvgLeadTimeInDays__c, (SELECT CreatedDate, LastModifiedDate, Street__c, City__c, State__c, Country__c, PostalCode__c FROM SupplierAddress__r) FROM Facility__c WHERE UUID__c = ':facilityUUID' LIMIT 1]]></salesforce:salesforce-query>
                 <salesforce:parameters><![CDATA[#[{facilityUUID: vars.id}]]]></salesforce:parameters>
             </salesforce:query>
             <logger level="INFO" doc:name="LOG: Raw Query Result" message="#[%dw 2.0 import toString from dw::util::Coercions --- &quot;[$(toString(now()))] Raw Query Result: $(write(vars.facilityQueryResponse, 'application/json'))&quot;]" />
@@ -160,11 +160,15 @@ if (sizeOf(vars.facilityQueryResponse) == 0)
 else
 {
     id: item.UUID__c,
+    createdAt: item.CreatedDate,
+    modifiedAt: item.LastModifiedDate,
     name: item.Name,
     facilityType: item.Type__c,
     avgLeadTimeInDays: item.AvgLeadTimeInDays__c,
     isActive: item.isActive__c,
     address: {
+    	createdAt: item.SupplierAddress__r.CreatedDate[0],
+    	modifiedAt: item.SupplierAddress__r.LastModifiedDate[0],
         street: item.SupplierAddress__r.Street__c[0],
         city: item.SupplierAddress__r.City__c[0],
         state: item.SupplierAddress__r.State__c[0],
@@ -181,57 +185,114 @@ if (sizeOf(vars.facilityQueryResponse) == 0) 404 else 200]]></ee:set-variable>
             </ee:variables>
         </ee:transform>
     </flow>
-
-    <!-- [STUDIO:"update-facility"]<flow name="update-facility" doc:name="UPDATE: Facility">
-        <try doc:name="TRY: Validate Facility">
-            <flow-ref name="validate-facility" doc:name="INVOKE: Validate Facility" />
-            <error-handler ref="error-handlers__handle-validation-failures" />
-        </try>
+	<sub-flow name="get-address-by-facility-id" doc:id="b063b844-eed7-4623-b734-8c77a5647adf" >
+		<try doc:name="Try" doc:id="241a7b38-ec99-45cc-83d0-bde2850c0203" >
+			<salesforce:query doc:name="QUERY: Address by Facility UUID" doc:id="2ce5bc9b-1b85-4934-86a4-4b04698b9eaf" config-ref="SalesforceConfig" target="queryAddressResponse">
+				<salesforce:salesforce-query><![CDATA[SELECT Id, Street__c, City__c, State__c, Country__c, PostalCode__c FROM SupplierAddress__c WHERE Facility__r.UUID__c = ':facilityUuid' LIMIT 1]]></salesforce:salesforce-query>
+				<salesforce:parameters><![CDATA[#[{
+	facilityUuid: vars.facilityUuid
+}]]]></salesforce:parameters>
+				<salesforce:headers />
+			</salesforce:query>
+			<ee:transform doc:name="MAP: Facility Address" doc:id="51f80353-4c7d-4b8e-8e92-2f2dc9d7b99f">
+				<ee:message>
+					<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	id: vars.queryAddressResponse.Id[0],
+	street: vars.queryAddressResponse.Street__c[0],
+	city: vars.queryAddressResponse.City__c[0],
+	state: vars.queryAddressResponse.State__c[0],
+	country: vars.queryAddressResponse.Country__c[0],
+	postalCode: vars.queryAddressResponse.PostalCode__c[0],
+}]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+			<logger level="INFO" doc:name="INFO: Facility Address" doc:id="f0825ed2-6863-4145-a005-a186cd3a7fb1" message="#[&quot;Facility Address: $(write(payload, 'application/json'))&quot;]" />
+			<error-handler ref="error-handlers__handle-salesforce-failures" />
+		</try>
+	</sub-flow>
+	<flow name="update-facility" doc:name="UPDATE: Facility">
+		<set-variable value="#[vars.id]" doc:name="SET: facilityUuid" doc:id="86d3430d-1dc2-4a1d-a7ed-3d4aa81e7362" variableName="facilityUuid"/>
         <try doc:name="TRY: Update Facility in Salesforce">
             <choice doc:name="CHECK: Address Provided">
-                <when expression="#[payload.address?&#93;">
-                    <salesforce:query config-ref="SalesforceConfig" doc:name="QUERY: Lookup Address by UUID" target="addressLookupResponse">
-                        <salesforce:salesforce-query><![CDATA[SELECT Id FROM Address__c WHERE UUID__c = ':addressUUID' LIMIT 1&#93;&#93;></salesforce:salesforce-query>
-                        <salesforce:parameters><![CDATA[#[{addressUUID: payload.address}&#93;&#93;&#93;></salesforce:parameters>
-                    </salesforce:query>
-                    <choice doc:name="CHECK: Address Exists">
-                        <when expression="#[sizeOf(vars.addressLookupResponse) > 0&#93;">
-                            <set-variable variableName="addressSfId" value="#[vars.addressLookupResponse[0&#93;.Id&#93;" doc:name="SET: addressSfId" />
-                        </when>
-                        <otherwise>
-                            <raise-error doc:name="RAISE: Address Not Found" type="VALIDATION_FAILURE:RESOURCE_NOT_FOUND" description="Address not found." />
-                        </otherwise>
-                    </choice>
-                </when>
-            </choice>
-            <salesforce:upsert config-ref="SalesforceConfig" doc:name="UPSERT: Facility by UUID" externalIdFieldName="UUID__c" objectType="Facility__c" target="updateFacilityResponse">
-                <salesforce:records><![CDATA[#[[{
-                    UUID__c: vars.id,
-                    (Name: payload.name) if (payload.name?),
-                    (Type__c: payload.facilityType) if (payload.facilityType != null),
-                    (isActive__c: payload.isActive as Boolean) if (payload.isActive != null),
-                    (AvgLeadTimeInDays__c: payload.avgLeadTimeInDays as Number) if (payload.avgLeadTimeInDays != null),
-                    (Address__c: vars.addressSfId) if (vars.addressSfId != null)
-                }&#93;&#93;&#93;&#93;></salesforce:records>
-            </salesforce:upsert>
-            <choice doc:name="CHECK: Update Succeeded">
-                <when expression="#[vars.updateFacilityResponse.successful == false&#93;">
-                    <raise-error doc:name="RAISE: Salesforce Error" type="VALIDATION_FAILURE:SALESFORCE" description="Failed to update facility in Salesforce." />
-                </when>
-            </choice>
-            <logger level="INFO" doc:name="LOG: Facility Updated" message="#[%dw 2.0 import toString from dw::util::Coercions &#45;&#45;- &quot;[$(toString(now()))&#93; Facility updated: $(vars.id)&quot;&#93;" />
-            <error-handler ref="error-handlers__handle-salesforce-failures" />
-        </try>
-        <ee:transform doc:name="PASS: Updated Facility">
-            <ee:message>
-                <ee:set-payload><![CDATA[%dw 2.0
+                <when expression="#[payload.address?]">
+                    <flow-ref doc:name="INVOKE: Get Facility Address" doc:id="aa62e56e-114b-430b-926c-298f669e2e0e" name="get-address-by-facility-id" target="facilityAddressId" targetValue="#[payload.id default null]"/>
+                
+</when>
+				<otherwise >
+					<logger level="INFO" doc:name="INFO: No address passed" doc:id="02b942de-197f-40a2-9173-a1a9a22e195b" message="No address passed"/>
+				</otherwise>
+            
+</choice>
+            <salesforce-composite:execute-composite-request doc:name="UPDATE: Facility" doc:id="95f4275b-3fde-428f-a10c-6b29c6a2f4f3" config-ref="SalesforceCompositeConfig" target="updateFacilityResponse">
+				<salesforce-composite:request-body ><![CDATA[#[%dw 2.0
 output application/json
-&#45;&#45;-
-payload&#93;&#93;></ee:set-payload>
-            </ee:message>
-        </ee:transform>
+import capitalize, remove from dw::core::Strings
+
+var apiVersion = "v66.0"
+
+fun transformKey(k: Key) = (capitalize(k as String) remove " ") ++ "__c"
+
+type Address = {|
+    street?: String,
+    city?: String,
+    state?: String,
+    postalCode?: String,
+    country?: String
+|}
+
+var addressUpdateRequest = if (payload.address != null)
+    payload.address mapObject ((v, k) -> {
+        (transformKey(k)): v
+    })
+else
+    null
+
+var facilityUpdateRequest = payload mapObject ((v, k) -> k match {
+    case "facilityType" -> { "Type__c": v }
+    case "name" -> { "Name": v }
+    case "address" -> {}
+    else -> { (transformKey(k)): v }
+})
+
+var addressId = vars.facilityAddressId default ""
+var facilityUuid = vars.facilityUuid default ""
+
+---
+{
+    allOrNone: true,
+    compositeRequest: [
+        ({
+            method: "PATCH",
+            url: "/services/data/$(apiVersion)/sobjects/SupplierAddress__c/$(addressId)",
+            referenceId: "UpdateAddress",
+            body: addressUpdateRequest
+        }) if (addressId != ""),
+        ({
+            method: "PATCH",
+            url: "/services/data/$(apiVersion)/sobjects/Facility__c/UUID__c/$(facilityUuid)",
+            referenceId: "UpdateFacility",
+            body: facilityUpdateRequest
+        }) if (facilityUuid != "")
+    ]
+}]]]></salesforce-composite:request-body>
+			</salesforce-composite:execute-composite-request>
+            <logger level="INFO" doc:name="INFO: Facility Updated Successfully" doc:id="3e824833-b91b-4a95-af0f-1f5dacf7ced9" message='#["Facility Updated Successfully"]'/>
+			<choice doc:name="Choice" doc:id="2f341521-9317-4f3c-806f-13fe57362f3a" >
+				<when expression="#[%dw 2.0&#10;import every from dw::core::Arrays&#10;---&#10;vars.updateFacilityResponse.compositeResponse every ($.httpStatusCode &gt;= 400)]">
+					<logger level="ERROR" doc:name="ERROR: Composite Failure" doc:id="bb3d55fe-77ef-4866-9a7f-3901c0a38f03" message="#[%dw 2.0 import toString from dw::util::Coercions --- &quot;[$(toString(now()))] Composite create-facility failed: $(write(vars.updateFacilityResponse, 'application/json'))&quot;]" />
+					<raise-error doc:name="RAISE: Salesforce Error" doc:id="10067c1d-12ea-4356-a76d-6f62aa391b51" type="VALIDATION_FAILURE:SALESFORCE" description="Failed to update facility in Salesforce." />
+				</when>
+				<otherwise >
+					<logger level="INFO" doc:name="INFO: Update Facility Response" doc:id="1991f1d5-75a7-4e78-ad5d-a6785dd60350" message="#[&quot;Update Facility Response: $(write(vars.updateFacilityResponse, 'application/json'))&quot;]" />
+				</otherwise>
+			</choice>
+			<error-handler ref="error-handlers__handle-salesforce-failures" />
+        </try>
         <error-handler ref="error-handlers__handle-validation-failures" />
-    </flow> [STUDIO] -->
+    </flow>
 
     <!-- [STUDIO:"query-facilities-by-supplier"]<flow name="query-facilities-by-supplier" doc:name="GET: Query Facilities By Supplier">
         <try doc:name="TRY: Query Paginated Facilities">
