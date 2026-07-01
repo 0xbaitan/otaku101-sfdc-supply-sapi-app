@@ -1,22 +1,42 @@
 {
-    "version": "0.2.0",
-    "configurations": [
-      
-      {
-        "type": "mule-xml-debugger",
-        "request": "launch",
-        "name": "Run Mule Application",
-        "noDebug": true,
-        "mule.projects": ["${workspaceFolder}"],
-        "mule.runtime.args": "${config:mule.runtime.defaultArguments}"
-      },
-      {
-        "type": "mule-xml-debugger",
-        "request": "launch",
-        "name": "Debug Mule Application",
-        "mule.projects": ["${workspaceFolder}"],
-        "mule.runtime.args": "${config:mule.runtime.defaultArguments}"
-        
-      }
-    ]
-  }
+  "version": "0.2.0",
+  "inputs": [
+    {
+      "id": "muleEnv",
+      "type": "pickString",
+      "description": "The Mule Environment",
+      "options": [
+        "local",
+        "sandbox"
+      ],
+      "default": "local"
+    },
+    {
+      "id": "secureKey",
+      "description": "The 16 bit secret key for decrypting encrypted properties",
+      "type": "promptString",
+      "password": true
+    }
+  ],
+  "configurations": [
+    {
+      "type": "mule-xml-debugger",
+      "request": "launch",
+      "name": "Run Mule Application",
+      "noDebug": true,
+      "mule.projects": [
+        "${workspaceFolder}"
+      ],
+      "mule.runtime.args": "${config:mule.runtime.defaultArguments} -M-Dmule.env=${input:muleEnv} -M-Dsecure.key=${input:secureKey}",
+    },
+    {
+      "type": "mule-xml-debugger",
+      "request": "launch",
+      "name": "Debug Mule Application",
+      "mule.projects": [
+        "${workspaceFolder}"
+      ],
+      "mule.runtime.args": "${config:mule.runtime.defaultArguments} -M-Dmule.env=${input:muleEnv} -M-Dsecure.key=${input:secureKey}",
+    }
+  ]
+}
