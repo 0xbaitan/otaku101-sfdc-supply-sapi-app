@@ -47,6 +47,7 @@ target/
 velocity.log
 
 
+/bin/
 
 .tooling-project
 

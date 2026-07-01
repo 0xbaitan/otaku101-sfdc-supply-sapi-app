@@ -4,7 +4,7 @@
 	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
-	<error-handler name="error-handlers__handle-validation-failures" doc:id="4819391c-23ce-4f3e-9b44-58a2390a4ab4" >
+	<error-handler name="error-handlers__handle-validation-failures" doc:name="HANDLE: Validation Failures" doc:id="4819391c-23ce-4f3e-9b44-58a2390a4ab4" >
 		<on-error-propagate enableNotifications="true" logException="true" doc:name="HANDLE: VALIDATION_FAILURE:* Errors" doc:id="0b372af1-6762-45dc-87f7-2805d8224706" type="VALIDATION_FAILURE:*">
 			<ee:transform doc:name="SET: Error Payload &amp; 400 HTTP Status" doc:id="3e723261-f7c9-4b82-9d00-f8b297162df9" >
 				<ee:message >
@@ -25,7 +25,7 @@ output application/json
 			</ee:transform>
 		</on-error-propagate>
 	</error-handler>
-	<error-handler name="error-handlers__handle-salesforce-failures" doc:id="25d6caf9-0e71-4dc6-bfdf-1e778305c273" >
+	<error-handler name="error-handlers__handle-salesforce-failures" doc:name="HANDLE: Salesforce Failures" doc:id="25d6caf9-0e71-4dc6-bfdf-1e778305c273" >
 		<on-error-propagate enableNotifications="true" logException="true" doc:name="HANDLE: SALESFORCE:* Errors" doc:id="c28567dd-35d6-404d-b5ae-b5e19251ec5d" type="SALESFORCE:*" >
 			<ee:transform doc:name="SET: Error Payload &amp; 500 HTTP Status" doc:id="79e11baa-9930-4faf-bd1b-b924efd330b1" >
 				<ee:message >

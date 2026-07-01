@@ -1,0 +1,277 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:java="http://www.mulesoft.org/schema/mule/java"
+    xmlns:validation="http://www.mulesoft.org/schema/mule/validation"
+    xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+    xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+    xmlns="http://www.mulesoft.org/schema/mule/core"
+    xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
+http://www.mulesoft.org/schema/mule/java http://www.mulesoft.org/schema/mule/java/current/mule-java.xsd">
+
+    <sub-flow name="validate-product" doc:name="VALIDATE: Product">
+        <choice doc:name="CHECK: Name Not Blank">
+            <when expression="#[payload.name?]">
+                <validation:is-not-blank-string value="#[payload.name]" message="Product name cannot be blank.">
+                    <error-mapping sourceType="VALIDATION:BLANK_STRING" targetType="VALIDATION_FAILURE:BLANK_NAME" />
+                </validation:is-not-blank-string>
+            </when>
+        </choice>
+    </sub-flow>
+
+    <flow name="create-product" doc:name="CREATE: Product">
+        <try doc:name="TRY: Validate Product">
+            <flow-ref name="validate-product" doc:name="INVOKE: Validate Product" />
+            <error-handler ref="error-handlers__handle-validation-failures" />
+        </try>
+        <try doc:name="TRY: Create Product in Salesforce">
+            <set-variable variableName="productId" value="#[import uuid7 from dataweave::util::Id --- uuid7()]" />
+            <salesforce:query config-ref="SalesforceConfig" doc:name="QUERY: Lookup Supplier by UUID">
+                <salesforce:salesforce-query><![CDATA[SELECT Id FROM Supplier__c WHERE UUID__c = ':supplierId' LIMIT 1]]></salesforce:salesforce-query>
+				<salesforce:parameters ><![CDATA[#[{
+	supplierId: vars.supplierId
+}]]]></salesforce:parameters>
+               
+            
+</salesforce:query>
+            <choice doc:name="CHECK: Supplier Exists">
+                <when expression="#[sizeOf(payload) > 0]">
+                    <set-variable variableName="supplierSfId" value="#[payload[0].Id]" />
+                </when>
+                <otherwise>
+                    <raise-error doc:name="RAISE: Supplier Not Found" type="VALIDATION_FAILURE:RESOURCE_NOT_FOUND" description="Supplier not found" />
+                </otherwise>
+            </choice>
+            <choice doc:name="CHECK: Has Category">
+                <when expression="#[payload.categoryId?]">
+                    <salesforce:query config-ref="SalesforceConfig" doc:name="QUERY: Lookup Category by UUID">
+                        <salesforce:salesforce-query>SELECT Id FROM ProductCategory__c WHERE UUID__c = ':categoryUuid' LIMIT 1</salesforce:salesforce-query>
+                        <salesforce:parameters>#[{categoryUuid: payload.categoryId}]</salesforce:parameters>
+                    </salesforce:query>
+                    <set-variable variableName="categorySfId" value="#[payload[0].Id]" />
+                </when>
+            </choice>
+            <salesforce:create config-ref="SalesforceConfig" doc:name="CREATE: Product in Salesforce" type="Product__c">
+                <salesforce:records>#[[{
+                    UUID__c: vars.productId,
+                    Supplier__c: vars.supplierSfId,
+                    Name: payload.name,
+                    (ProductCategory__c: vars.categorySfId) if (vars.categorySfId?),
+                    (SKU__c: payload.sku) if (payload.sku != null),
+                    (Price__c: payload.price) if (payload.price != null),
+                    (Description__c: payload.description) if (payload.description != null)
+                }]]</salesforce:records>
+            </salesforce:create>
+            <logger level="INFO" message="#[%dw 2.0 import toString from dw::util::Coercions --- &quot;[$(toString(now()))] Product created: $(write(payload, 'application/json'))&quot;]" />
+            <error-handler ref="error-handlers__handle-salesforce-failures" />
+        </try>
+        <ee:transform doc:name="SET: 201 Created Response">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    id: vars.productId
+}]]></ee:set-payload>
+            </ee:message>
+            <ee:variables>
+                <ee:set-variable variableName="httpStatus">201</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <error-handler ref="error-handlers__handle-validation-failures" />
+    </flow>
+
+    <flow name="find-product-by-id" doc:name="GET: Product By Id">
+        <try doc:name="TRY: Query Product by UUID">
+            <salesforce:query config-ref="SalesforceConfig" doc:name="QUERY: Product by UUID">
+                <salesforce:salesforce-query>SELECT UUID__c, Name, SKU__c, Price__c, Description__c, ProductCategory__r.UUID__c, ProductCategory__r.Name FROM Product__c WHERE UUID__c = ':productUuid' LIMIT 1</salesforce:salesforce-query>
+                <salesforce:parameters>#[{productUuid: vars.id}]</salesforce:parameters>
+            </salesforce:query>
+            <logger level="INFO" message="#[%dw 2.0 import toString from dw::util::Coercions --- &quot;Raw Query Result: $(write(payload, 'application/json'))&quot;]" />
+            <error-handler ref="error-handlers__handle-salesforce-failures" />
+        </try>
+        <ee:transform doc:name="SET: Product or 404 Response">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+
+var item = payload[0]
+---
+if (sizeOf(payload) == 0)
+    {message: "Resource not found"}
+else
+{
+    id: item.UUID__c,
+    name: item.Name,
+    sku: item.SKU__c,
+    price: item.Price__c,
+    description: item.Description__c,
+    categoryId: item.ProductCategory__r.UUID__c default null,
+    categoryName: item.ProductCategory__r.Name default null
+}]]></ee:set-payload>
+            </ee:message>
+            <ee:variables>
+                <ee:set-variable variableName="httpStatus"><![CDATA[%dw 2.0
+output application/java
+---
+if (sizeOf(payload) == 0) 404 else 200]]></ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+    </flow>
+
+    <flow name="update-product" doc:name="UPDATE: Product">
+        <try doc:name="TRY: Validate Product">
+            <flow-ref name="validate-product" doc:name="INVOKE: Validate Product" />
+            <error-handler ref="error-handlers__handle-validation-failures" />
+        </try>
+        <try doc:name="TRY: Update Product in Salesforce">
+            <choice doc:name="CHECK: Has Category">
+                <when expression="#[payload.categoryId?]">
+                    <salesforce:query config-ref="SalesforceConfig" doc:name="QUERY: Lookup Category by UUID">
+                        <salesforce:salesforce-query>SELECT Id FROM ProductCategory__c WHERE UUID__c = ':categoryUuid' LIMIT 1</salesforce:salesforce-query>
+                        <salesforce:parameters>#[{categoryUuid: payload.categoryId}]</salesforce:parameters>
+                    </salesforce:query>
+                    <set-variable variableName="categorySfId" value="#[payload[0].Id]" />
+                </when>
+            </choice>
+            <salesforce:upsert config-ref="SalesforceConfig" doc:name="UPSERT: Product by UUID" objectType="Product__c" externalIdFieldName="UUID__c">
+                <salesforce:records>#[[{
+                    UUID__c: vars.id,
+                    (Name: payload.name) if (payload.name?),
+                    (ProductCategory__c: vars.categorySfId) if (vars.categorySfId?),
+                    (SKU__c: payload.sku) if (payload.sku != null),
+                    (Price__c: payload.price) if (payload.price != null),
+                    (Description__c: payload.description) if (payload.description != null)
+                }]]</salesforce:records>
+            </salesforce:upsert>
+            <logger level="INFO" message="#[&quot;Raw results: $(write(payload, 'application/json'))&quot;]" />
+            <error-handler ref="error-handlers__handle-salesforce-failures" />
+        </try>
+        <ee:transform doc:name="PASS: Updated Product">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        <error-handler ref="error-handlers__handle-validation-failures" />
+    </flow>
+
+    <flow name="query-products-by-supplier" doc:name="GET: Query Products By Supplier">
+        <try doc:name="TRY: Query Paginated Products">
+            <ee:transform doc:name="SET: Pagination Params">
+                <ee:variables>
+                    <ee:set-variable variableName="pageSize"><![CDATA[%dw 2.0
+output application/java
+---
+(attributes.queryParams.limit default 25) as Number]]></ee:set-variable>
+                    <ee:set-variable variableName="afterCursor"><![CDATA[%dw 2.0
+output application/java
+---
+attributes.queryParams.after]]></ee:set-variable>
+                    <ee:set-variable variableName="beforeCursor"><![CDATA[%dw 2.0
+output application/java
+---
+attributes.queryParams.before]]></ee:set-variable>
+                </ee:variables>
+            </ee:transform>
+            <ee:transform doc:name="BUILD: Cursor SOQL Query">
+                <ee:variables>
+                    <ee:set-variable variableName="soql"><![CDATA[%dw 2.0
+import dataweave::util::Pagination
+output application/java
+
+var safeSupplierId = if (Pagination::isValidUuid(vars.id)) vars.id else ""
+var safeBefore = if (vars.beforeCursor != null and Pagination::isValidUuid(vars.beforeCursor)) vars.beforeCursor else null
+var safeAfter = if (vars.afterCursor != null and Pagination::isValidUuid(vars.afterCursor)) vars.afterCursor else null
+var baseQuery = "SELECT UUID__c, Name, SKU__c, Price__c, Description__c, ProductCategory__r.UUID__c, ProductCategory__r.Name FROM Product__c WHERE Supplier__r.UUID__c = '" ++ safeSupplierId ++ "'"
+---
+if (safeBefore != null)
+    baseQuery ++ " AND UUID__c < '" ++ safeBefore ++ "' ORDER BY UUID__c DESC LIMIT " ++ (vars.pageSize + 1)
+else if (safeAfter != null)
+    baseQuery ++ " AND UUID__c > '" ++ safeAfter ++ "' ORDER BY UUID__c ASC LIMIT " ++ (vars.pageSize + 1)
+else
+    baseQuery ++ " ORDER BY UUID__c ASC LIMIT " ++ (vars.pageSize + 1)]]></ee:set-variable>
+                </ee:variables>
+            </ee:transform>
+            <salesforce:query config-ref="SalesforceConfig" doc:name="QUERY: Paginated Products">
+                <salesforce:salesforce-query>#[vars.soql]</salesforce:salesforce-query>
+            </salesforce:query>
+            <logger level="INFO" message="#[%dw 2.0 import toString from dw::util::Coercions --- &quot;Raw Query Result: $(write(payload, 'application/json'))&quot;]" />
+            <ee:transform doc:name="MAP: Paginated Products">
+                <ee:message>
+                    <ee:set-payload><![CDATA[%dw 2.0
+import dataweave::util::Pagination
+output application/json
+
+var result = Pagination::paginate(payload, vars.pageSize, vars.afterCursor, vars.beforeCursor)
+---
+{
+    paging: {
+        cursors: {
+            before: result.before,
+            after: result.after
+        },
+        hasNext: result.after != null,
+        hasPrevious: result.before != null,
+        limit: vars.pageSize
+    },
+    results: result.data map {
+        id: $.UUID__c,
+        name: $.Name,
+        sku: $.SKU__c,
+        price: $.Price__c,
+        description: $.Description__c,
+        categoryId: $.ProductCategory__r.UUID__c default null,
+        categoryName: $.ProductCategory__r.Name default null
+    }
+}]]></ee:set-payload>
+                </ee:message>
+                <ee:variables>
+                    <ee:set-variable variableName="httpStatus">200</ee:set-variable>
+                </ee:variables>
+            </ee:transform>
+            <error-handler ref="error-handlers__handle-salesforce-failures" />
+        </try>
+    </flow>
+
+    <flow name="get-pricebook-template" doc:name="GET: Pricebook Template">
+        <try doc:name="TRY: Query Pricebook Data">
+            <salesforce:query config-ref="SalesforceConfig" doc:name="QUERY: Products by Supplier UUID">
+                <salesforce:salesforce-query>SELECT UUID__c, Name, SKU__c, Price__c FROM Product__c WHERE Supplier__r.UUID__c = ':supplierUuid'</salesforce:salesforce-query>
+                <salesforce:parameters>#[{supplierUuid: vars.id}]</salesforce:parameters>
+            </salesforce:query>
+            <error-handler ref="error-handlers__handle-salesforce-failures" />
+        </try>
+        <ee:transform doc:name="SET: XLSX Response">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/xlsx
+---
+{
+    "Pricebook Template": payload map {
+        "Product ID": $.UUID__c,
+        "Name": $.Name,
+        "SKU": $.SKU__c default "",
+        "Price": $.Price__c default 0,
+        "Quantity": 0
+    }
+}]]></ee:set-payload>
+            </ee:message>
+            <ee:variables>
+                <ee:set-variable variableName="httpStatus">200</ee:set-variable>
+                <ee:set-variable variableName="outboundHeaders"><![CDATA[%dw 2.0
+output application/java
+---
+{
+    "Content-Disposition": "attachment; filename=\"pricebook-template-" ++ vars.id ++ ".xlsx\""
+}]]></ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+    </flow>
+</mule>

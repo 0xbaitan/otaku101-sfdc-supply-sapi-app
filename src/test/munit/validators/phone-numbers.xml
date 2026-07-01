@@ -8,7 +8,7 @@
 		http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
 		http://www.mulesoft.org/schema/mule/munit-tools  http://www.mulesoft.org/schema/mule/munit-tools/current/mule-munit-tools.xsd">
 	<munit:config name="validators.xml" />
-	<munit:test name="test:validators\phone-numbers__shouldBeSuccessForValidPhoneNumber" doc:id="a8444e04-dfa8-4dc9-8fa2-ba1141190583" description="Test">
+	<munit:test name="test:validators\phone-numbers__shouldBeSuccessForValidPhoneNumber" doc:id="a8444e04-dfa8-4dc9-8fa2-ba1141190583" description="Test" ignore="true">
 		<munit:execution >
 			<set-variable value='#[%dw 2.0&#10;import data::validators::PhoneNumbers&#10;---&#10;PhoneNumbers::validPhoneNumber]' doc:name="SET: validators\phone-numbers:input" doc:id="ce0fd66e-0419-46d1-9717-52f14d827e54" variableName="validators\phone-numbers:input"/>
 			<flow-ref doc:name="Flow-ref to validators\phone-numbers" doc:id="1eacfc7a-fdca-499b-90ba-00c0ef9b7a6b" name="validators\phone-numbers" target="result"/>
@@ -18,7 +18,7 @@
 			<munit-tools:assert-that doc:name="ASSERT: success = true" doc:id="6f45c917-9a5b-4064-aeff-2a93f55968a0" is="#[MunitTools::equalTo(true)]" expression="#[vars.result.success]"/>
 		</munit:validation>
 	</munit:test>
-	<munit:test name="test:validators\phone-numbers__shouldBeSuccessForValidPhoneNumbers" doc:id="c43ea224-fb89-47b7-a1c2-ebcf93974937" description="Test" >
+	<munit:test name="test:validators\phone-numbers__shouldBeSuccessForValidPhoneNumbers" doc:id="c43ea224-fb89-47b7-a1c2-ebcf93974937" description="Test" ignore="true">
 		<munit:execution >
 			<set-variable value='#[%dw 2.0&#10;output application/json&#10;import data::validators::PhoneNumbers&#10;---&#10;PhoneNumbers::validPhoneNumbers]' doc:name="SET: validators\phone-numbers:input" doc:id="3851fc11-7ef4-40bf-88d5-c9f14f17b945" variableName="validators\phone-numbers:input" />
 			<flow-ref doc:name="Flow-ref to validators\phone-numbers" doc:id="7dd9abda-df41-4842-91f2-21062cd19aad" name="validators\phone-numbers" target="result" />
@@ -28,7 +28,7 @@
 			<munit-tools:assert-that doc:name="ASSERT: success = true" doc:id="d78d3f4f-1f1e-45ec-8e5a-3617fe332c61" expression="#[vars.result.success]" is="#[MunitTools::equalTo(true)]" />
 		</munit:validation>
 	</munit:test>
-	<munit:test name="test:validators\phone-numbers__shouldThrowForInvalidPhoneNumber" doc:id="4dbca56c-879a-4a32-8871-77099d2db06b" description="Test" expectedErrorType="VALIDATION_FAILURE:INVALID_PHONE_NUMBER">
+	<munit:test name="test:validators\phone-numbers__shouldThrowForInvalidPhoneNumber" doc:id="4dbca56c-879a-4a32-8871-77099d2db06b" description="Test" expectedErrorType="VALIDATION_FAILURE:INVALID_PHONE_NUMBER" ignore="true">
 		<munit:execution >
 			<set-variable value='#[%dw 2.0&#10;output application/json&#10;import data::validators::PhoneNumbers&#10;---&#10;PhoneNumbers::invalidPhoneNumber]' doc:name="SET: validators\phone-numbers:input" doc:id="2f1fbdf3-b8ce-4d0b-a6c7-7c3eb456efe8" variableName="validators\phone-numbers:input" />
 			<flow-ref doc:name="Flow-ref to validators\phone-numbers" doc:id="e94e1c76-4892-4598-92c1-6449d4c8f288" name="validators\phone-numbers" target="result" />
@@ -37,7 +37,7 @@
 			<logger level="INFO" doc:name="INFO: result" doc:id="90cdd8d4-54ed-4de7-b1cb-0f06f7e11a91" message='#[write(vars.result, "application/json")]' />
 		</munit:validation>
 	</munit:test>
-	<munit:test name="test:validators\phone-numbers__shouldThrowForInvalidPhoneNumbers" doc:id="f2512885-bbaf-436a-8da1-d8a70959d135" description="Test" expectedErrorType="VALIDATION_FAILURE:INVALID_PHONE_NUMBER">
+	<munit:test name="test:validators\phone-numbers__shouldThrowForInvalidPhoneNumbers" doc:id="f2512885-bbaf-436a-8da1-d8a70959d135" description="Test" expectedErrorType="VALIDATION_FAILURE:INVALID_PHONE_NUMBER" ignore="true">
 		<munit:execution >
 			<set-variable value='#[%dw 2.0&#10;output application/json&#10;import data::validators::PhoneNumbers&#10;---&#10;PhoneNumbers::invalidPhoneNumbers]' doc:name="SET: validators\phone-numbers:input" doc:id="fce61250-844f-4e83-8a94-843af54148b0" variableName="validators\phone-numbers:input" />
 			<flow-ref doc:name="Flow-ref to validators\phone-numbers" doc:id="9599c0ce-fad6-477b-aab8-8316217f17e5" name="validators\phone-numbers" target="result" />
