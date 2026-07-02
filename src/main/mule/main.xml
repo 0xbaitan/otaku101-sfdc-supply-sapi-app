@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:api-gateway="http://www.mulesoft.org/schema/mule/api-gateway" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:oauth="http://www.mulesoft.org/schema/mule/oauth" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns:salesforce-composite="http://www.mulesoft.org/schema/mule/salesforce-composite" xmlns:secure-properties="http://www.mulesoft.org/schema/mule/secure-properties" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd  http://www.mulesoft.org/schema/mule/salesforce-composite http://www.mulesoft.org/schema/mule/salesforce-composite/current/mule-salesforce-composite.xsd http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd http://www.mulesoft.org/schema/mule/oauth http://www.mulesoft.org/schema/mule/oauth/current/mule-oauth.xsd http://www.mulesoft.org/schema/mule/api-gateway http://www.mulesoft.org/schema/mule/api-gateway/current/mule-api-gateway.xsd http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/schema/mule/secure-properties/current/mule-secure-properties.xsd">
     <http:listener-config name="main-httpListenerConfig">
-        <http:listener-connection host="0.0.0.0" port="8081" />
+        <http:listener-connection host="0.0.0.0" port="8081"></http:listener-connection>
     </http:listener-config>
     <apikit:config name="main-config" api="resource::365d8e9a-5b53-4d65-8776-8d29047c4ac6:otaku101-sfdc-supply-sapi:1.0.9:raml:zip:main.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
     <salesforce-composite:composite-config name="SalesforceCompositeConfig" doc:name="Salesforce Composite Config" doc:id="2412b199-01d3-4e7e-b384-e3ea3b8471eb">
@@ -29,7 +29,7 @@
                 <http:headers>#[vars.outboundHeaders default {}]</http:headers>
             </http:error-response>
         </http:listener>
-        <apikit:router config-ref="main-config" />
+        <apikit:router config-ref="main-config"></apikit:router>
         <error-handler>
             <on-error-propagate type="APIKIT:BAD_REQUEST">
                 <ee:transform doc:name="SET: 400 Bad Request Response">
@@ -121,7 +121,7 @@ output application/json
                 <http:headers>#[vars.outboundHeaders default {}]</http:headers>
             </http:error-response>
         </http:listener>
-        <apikit:console config-ref="main-config" />
+        <apikit:console config-ref="main-config"></apikit:console>
         <error-handler>
             <on-error-propagate type="APIKIT:NOT_FOUND">
                 <ee:transform doc:name="SET: 404 Console Resource Not Found Response">
