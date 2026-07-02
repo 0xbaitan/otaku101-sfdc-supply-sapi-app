@@ -215,7 +215,7 @@ output application/java
                 <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
             </ee:variables>
         </ee:transform>
-        <flow-ref name="update-product-category" />
+        <flow-ref name="update-product-category" doc:name="INVOKE: Update Product Category"/>
     </flow>
     <flow name="patch:\suppliers\(id):application\json:main-config" doc:name="PATCH: Update Supplier">
         <ee:transform doc:name="SET: id">
