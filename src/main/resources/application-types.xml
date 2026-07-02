@@ -4,6 +4,7 @@
     <types:type name="SupplierPaginationMetadata" format="json">
       <types:shape format="json-schema" location="schemas/supplier-pagination-metadata.json"/>
     </types:type>
+    <types:type></types:type>
   </types:catalog>
   <types:enrichment select="#bdfb9fc0-bdbb-4970-b54b-c6786e95d75c">
     <types:processor-declaration>

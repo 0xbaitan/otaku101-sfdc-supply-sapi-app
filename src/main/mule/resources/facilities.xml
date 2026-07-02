@@ -22,7 +22,8 @@ http://www.mulesoft.org/schema/mule/java http://www.mulesoft.org/schema/mule/jav
                     <error-mapping sourceType="VALIDATION:BLANK_STRING" targetType="VALIDATION_FAILURE:BLANK_NAME" />
                 </validation:is-not-blank-string>
             </when>
-        </choice>
+        
+</choice>
         <choice doc:name="CHECK: Facility Type Valid">
             <when expression="#[payload.facilityType?]">
                 <validation:is-true expression="#[payload.facilityType is String and ['Warehouse', 'Manufacturing', 'Distribution', 'Office'] contains payload.facilityType]" message="Facility type must be one of: Warehouse, Manufacturing, Distribution, Office.">

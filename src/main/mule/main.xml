@@ -3,7 +3,7 @@
     <http:listener-config name="main-httpListenerConfig">
         <http:listener-connection host="0.0.0.0" port="8081" />
     </http:listener-config>
-    <apikit:config name="main-config" api="resource::365d8e9a-5b53-4d65-8776-8d29047c4ac6:otaku101-sfdc-supply-sapi:1.0.7:raml:zip:main.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+    <apikit:config name="main-config" api="resource::365d8e9a-5b53-4d65-8776-8d29047c4ac6:otaku101-sfdc-supply-sapi:1.0.9:raml:zip:main.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
     <salesforce-composite:composite-config name="SalesforceCompositeConfig" doc:name="Salesforce Composite Config" doc:id="2412b199-01d3-4e7e-b384-e3ea3b8471eb">
         <salesforce-composite:config-with-oauth-connection>
             <salesforce-composite:oauth-authorization-code consumerKey="${sf.client_id}" consumerSecret="${secure::sf.client_secret}" />
@@ -139,7 +139,7 @@ output application/json
         </error-handler>
     </flow>
     <flow name="get:\suppliers:main-config" doc:name="GET: Query Suppliers">
-        <flow-ref doc:id="f12a7b2d-f283-40b0-a71e-f08b467fbc41" name="query-suppliers" />
+        <flow-ref doc:id="f12a7b2d-f283-40b0-a71e-f08b467fbc41" name="query-suppliers" doc:name="INVOKE: Query Suppliers" />
     </flow>
     <flow name="get:\suppliers\(id):main-config" doc:name="GET: Get Supplier By Id">
         <ee:transform doc:name="SET: id">
@@ -148,15 +148,15 @@ output application/json
             </ee:variables>
         </ee:transform>
         <flow-ref doc:name="FLOW: Get Supplier By Id" doc:id="12f50aaf-304c-4993-8554-36c142dc12b3" name="find-supplier-by-id" />
-		<ee:transform doc:name="Transform Message" doc:id="6abaabc2-7b56-4f40-bc6e-993319ca1c19" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
+        <ee:transform doc:name="Transform Message" doc:id="6abaabc2-7b56-4f40-bc6e-993319ca1c19">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
 output application/java
 ---
 {
 }]]></ee:set-payload>
-			</ee:message>
-		</ee:transform>
+            </ee:message>
+        </ee:transform>
     </flow>
     <flow name="post:\suppliers:application\json:main-config" doc:name="POST: Create Supplier">
         <flow-ref doc:name="FLOW: Create Supplier" doc:id="7bb1bb38-a754-40c7-9b3e-525c6f568820" name="create-supplier" />
@@ -199,7 +199,7 @@ output application/java
                 <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
             </ee:variables>
         </ee:transform>
-        <flow-ref name="update-facility" doc:name="INVOKE: Update Facility"/>
+        <flow-ref name="update-facility" doc:name="INVOKE: Update Facility" />
     </flow>
     <flow name="patch:\products\(id):application\json:main-config" doc:name="PATCH: Update Product">
         <ee:transform doc:name="SET: id">
@@ -239,7 +239,7 @@ output application/java
                 <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
             </ee:variables>
         </ee:transform>
-        <flow-ref name="find-contact-by-id" />
+        <flow-ref name="find-contact-by-id" doc:name="INVOKE: Find Contact By Id"/>
     </flow>
     <flow name="get:\suppliers\(id)\facilities:main-config" doc:name="GET: Query Facilities By Supplier">
         <ee:transform doc:name="SET: id">
